@@ -1,0 +1,16 @@
+{
+  "name": "org-sphere",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OrgSphere - The Operating System for Modern Organizations",
+  "scripts": {
+    "prepare": "husky",
+    "format": "dotnet format --no-restore --severity info",
+    "format:check": "dotnet format --no-restore --severity info --verify-no-changes",
+    "build": "dotnet build",
+    "test": "dotnet test"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

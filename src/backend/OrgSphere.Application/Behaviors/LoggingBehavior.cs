@@ -1,0 +1,40 @@
+using System.Diagnostics;
+using DispatchR.Abstractions.Send;
+using Microsoft.Extensions.Logging;
+
+namespace OrgSphere.Application.Behaviors;
+
+public class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavior<TRequest, TResponse>> logger) : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : class, IRequest<TRequest, TResponse>
+{
+    private readonly ILogger<LoggingBehavior<TRequest, TResponse>> _logger = logger;
+
+    public required IRequestHandler<TRequest, TResponse> NextPipeline { get; set; }
+
+    public TResponse Handle(TRequest request, CancellationToken cancellationToken)
+    {
+        var requestName = typeof(TRequest).Name;
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            var stopwatch = Stopwatch.StartNew();
+            _logger.LogInformation("Handling {RequestName}", requestName);
+
+            try
+            {
+                var response = NextPipeline.Handle(request, cancellationToken);
+                stopwatch.Stop();
+                _logger.LogInformation("Handled {RequestName} in {ElapsedMs}ms", requestName, stopwatch.ElapsedMilliseconds);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogError(ex, "Error handling {RequestName} after {ElapsedMs}ms", requestName, stopwatch.ElapsedMilliseconds);
+                throw;
+            }
+        }
+
+        return NextPipeline.Handle(request, cancellationToken);
+    }
+}
