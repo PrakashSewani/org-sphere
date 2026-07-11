@@ -268,20 +268,27 @@ Technology choices should support these goals rather than dictate them.
 
 When contributing to this repository:
 
-1. Prioritize business requirements over implementation details.
-2. Keep the organization graph as the central abstraction.
-3. Avoid tightly coupling modules.
-4. Design for extensibility and multi-tenancy.
-5. Prefer configuration over hardcoded behavior.
-6. Ensure every feature integrates naturally with the organization graph.
-7. Think from the perspective of HR, Managers, Employees, and Executives.
-8. Maintain clean architecture and separation of concerns.
-9. Optimize for enterprise scalability.
-10. Every new feature should answer:
+1. **Read [AGENT.md](AGENT.md) first** - Project-specific instructions with auto-skill loading
+2. **Check [docs/](docs/)** - Before implementing any feature
+3. **Follow [skills/](skills/)** - Relevant skill auto-loads based on your request
 
-> "How does this interact with the organization graph?"
+### Quick Links
 
-If it doesn't, reconsider the design.
+| Document | Purpose |
+|----------|---------|
+| [AGENT.md](AGENT.md) | Core agent instructions + skill loading |
+| [TODO.md](TODO.md) | Project task list (agent works from this) |
+| [skills/](skills/) | Project-specific skills |
+| [docs/](docs/) | Product documentation |
+
+### Skills (Auto-Loaded Based on Intent)
+
+| Skill | Use When |
+|-------|----------|
+| [Organization Graph](skills/org-graph/SKILL.md) | Working with graph entities/relationships |
+| [Module Development](skills/module-dev/SKILL.md) | Creating/modifying modules |
+| [Documentation](skills/docs-workflow/SKILL.md) | Updating documentation |
+| [Testing](skills/test-workflow/SKILL.md) | Writing/running tests |
 
 ---
 
