@@ -7,14 +7,9 @@ using OrgSphere.Infrastructure.Persistence;
 
 namespace OrgSphere.Infrastructure.Repositories;
 
-public class GraphNodeRepository : IGraphNodeRepository
+public class GraphNodeRepository(INeo4jContext context) : IGraphNodeRepository
 {
-    private readonly INeo4jContext _context;
-
-    public GraphNodeRepository(INeo4jContext context)
-    {
-        _context = context;
-    }
+    private readonly INeo4jContext _context = context;
 
     public async Task<GraphNode?> GetByIdAsync(NodeId id, TenantId tenantId, CancellationToken cancellationToken = default)
     {
@@ -44,7 +39,7 @@ public class GraphNodeRepository : IGraphNodeRepository
 
         var result = await session.RunAsync(query, parameters);
         var records = await result.ToListAsync(cancellationToken);
-        return records.Select(x => MapToEntity(x)).ToList();
+        return [.. records.Select(x => MapToEntity(x))];
     }
 
     public async Task<GraphNode> CreateAsync(GraphNode node, CancellationToken cancellationToken = default)
@@ -109,7 +104,7 @@ public class GraphNodeRepository : IGraphNodeRepository
             new { startNodeId = startNodeId.Value.ToString() });
 
         var records = await result.ToListAsync(cancellationToken);
-        return records.Select(r => MapToEntity(r, "target")).ToList();
+        return [.. records.Select(r => MapToEntity(r, "target"))];
     }
 
     private static GraphNode MapToEntity(IRecord record, string nodeKey = "n")
@@ -121,7 +116,7 @@ public class GraphNodeRepository : IGraphNodeRepository
             Id = new NodeId(Guid.Parse(props["Id"].As<string>())),
             TenantId = new TenantId(Guid.Parse(props["TenantId"].As<string>())),
             Type = Enum.Parse<NodeType>(props["Type"].As<string>()),
-            Properties = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(props["Properties"].As<string>()) ?? new(),
+            Properties = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(props["Properties"].As<string>()) ?? [],
             CreatedAt = DateTime.Parse(props["CreatedAt"].As<string>()),
             UpdatedAt = DateTime.Parse(props["UpdatedAt"].As<string>())
         };

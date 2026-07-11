@@ -1,25 +1,20 @@
 using DispatchR;
 using DispatchR.Abstractions.Send;
+using Microsoft.AspNetCore.Mvc;
 using OrgSphere.Application.Commands;
 using OrgSphere.Application.DTOs;
 using OrgSphere.Application.Queries;
 using OrgSphere.Domain.Enums;
 using OrgSphere.Domain.Interfaces;
 using OrgSphere.Domain.ValueObjects;
-using Microsoft.AspNetCore.Mvc;
 
 namespace OrgSphere.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class GraphNodesController : ControllerBase
+public class GraphNodesController(IMediator mediator) : ControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public GraphNodesController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
+    private readonly IMediator _mediator = mediator;
 
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<GraphNodeDto>>> GetAll([FromQuery] NodeType? type)

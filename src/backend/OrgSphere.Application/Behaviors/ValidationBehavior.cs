@@ -3,15 +3,10 @@ using FluentValidation;
 
 namespace OrgSphere.Application.Behaviors;
 
-public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators) : IPipelineBehavior<TRequest, TResponse>
     where TRequest : class, IRequest<TRequest, TResponse>
 {
-    private readonly IEnumerable<IValidator<TRequest>> _validators;
-
-    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
-    {
-        _validators = validators;
-    }
+    private readonly IEnumerable<IValidator<TRequest>> _validators = validators;
 
     public required IRequestHandler<TRequest, TResponse> NextPipeline { get; set; }
 
@@ -29,7 +24,7 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
                 .Where(f => f != null)
                 .ToList();
 
-            if (failures.Any())
+            if (failures.Count != 0)
             {
                 throw new ValidationException(failures);
             }

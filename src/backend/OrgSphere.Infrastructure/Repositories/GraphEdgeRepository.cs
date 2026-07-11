@@ -7,14 +7,9 @@ using OrgSphere.Infrastructure.Persistence;
 
 namespace OrgSphere.Infrastructure.Repositories;
 
-public class GraphEdgeRepository : IGraphEdgeRepository
+public class GraphEdgeRepository(INeo4jContext context) : IGraphEdgeRepository
 {
-    private readonly INeo4jContext _context;
-
-    public GraphEdgeRepository(INeo4jContext context)
-    {
-        _context = context;
-    }
+    private readonly INeo4jContext _context = context;
 
     public async Task<GraphEdge?> GetByIdAsync(EdgeId id, TenantId tenantId, CancellationToken cancellationToken = default)
     {
@@ -44,7 +39,7 @@ public class GraphEdgeRepository : IGraphEdgeRepository
 
         var result = await session.RunAsync(query, parameters);
         var records = await result.ToListAsync(cancellationToken);
-        return records.Select(x => MapToEntity(x)).ToList();
+        return [.. records.Select(x => MapToEntity(x))];
     }
 
     public async Task<GraphEdge> CreateAsync(GraphEdge edge, CancellationToken cancellationToken = default)
@@ -116,7 +111,7 @@ public class GraphEdgeRepository : IGraphEdgeRepository
             new { sourceId = sourceId.Value.ToString(), tenantId = tenantId.Value.ToString() });
 
         var records = await result.ToListAsync(cancellationToken);
-        return records.Select(x => MapToEntity(x)).ToList();
+        return [.. records.Select(x => MapToEntity(x))];
     }
 
     public async Task<IEnumerable<GraphEdge>> GetByTargetAsync(NodeId targetId, TenantId tenantId, CancellationToken cancellationToken = default)
@@ -127,7 +122,7 @@ public class GraphEdgeRepository : IGraphEdgeRepository
             new { targetId = targetId.Value.ToString(), tenantId = tenantId.Value.ToString() });
 
         var records = await result.ToListAsync(cancellationToken);
-        return records.Select(x => MapToEntity(x)).ToList();
+        return [.. records.Select(x => MapToEntity(x))];
     }
 
     private static GraphEdge MapToEntity(IRecord record, string edgeKey = "e")
@@ -141,7 +136,7 @@ public class GraphEdgeRepository : IGraphEdgeRepository
             Type = Enum.Parse<EdgeType>(props["Type"].As<string>()),
             SourceId = new NodeId(Guid.Parse(props["SourceId"].As<string>())),
             TargetId = new NodeId(Guid.Parse(props["TargetId"].As<string>())),
-            Properties = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(props["Properties"].As<string>()) ?? new(),
+            Properties = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(props["Properties"].As<string>()) ?? [],
             CreatedAt = DateTime.Parse(props["CreatedAt"].As<string>()),
             UpdatedAt = DateTime.Parse(props["UpdatedAt"].As<string>())
         };

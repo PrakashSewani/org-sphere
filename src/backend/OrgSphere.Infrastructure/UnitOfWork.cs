@@ -4,18 +4,13 @@ using OrgSphere.Infrastructure.Repositories;
 
 namespace OrgSphere.Infrastructure;
 
-public class UnitOfWork : IUnitOfWork
+public class UnitOfWork(INeo4jContext context) : IUnitOfWork
 {
-    private readonly INeo4jContext _context;
+    private readonly INeo4jContext _context = context;
     private ITenantRepository? _tenants;
     private IUserRepository? _users;
     private IGraphNodeRepository? _graphNodes;
     private IGraphEdgeRepository? _graphEdges;
-
-    public UnitOfWork(INeo4jContext context)
-    {
-        _context = context;
-    }
 
     public ITenantRepository Tenants => _tenants ??= new TenantRepository(_context);
     public IUserRepository Users => _users ??= new UserRepository(_context);
@@ -32,5 +27,6 @@ public class UnitOfWork : IUnitOfWork
     public void Dispose()
     {
         _context.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

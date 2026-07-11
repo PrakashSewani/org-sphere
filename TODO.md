@@ -26,7 +26,7 @@
 
 - [x] **TODO-001**: Initialize project structure (.NET solution, Clean Architecture, Docker, gitignore)
 - [x] **TODO-002**: Set up Docker for Neo4j and PostgreSQL databases
-- [ ] **TODO-003**: Set up development environment (dotnet format, pre-commit hooks)
+- [x] **TODO-003**: Set up development environment (dotnet format, pre-commit hooks)
 - [ ] **TODO-004**: Set up CI/CD pipeline (GitHub Actions: lint, test, build)
 
 ### Database

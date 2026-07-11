@@ -8,14 +8,9 @@ namespace OrgSphere.Application.Queries;
 
 public record GetGraphNodeByIdQuery(Guid NodeId) : IRequest<GetGraphNodeByIdQuery, ValueTask<GraphNodeDto?>>;
 
-public class GetGraphNodeByIdHandler : IRequestHandler<GetGraphNodeByIdQuery, ValueTask<GraphNodeDto?>>
+public class GetGraphNodeByIdHandler(IUnitOfWork unitOfWork) : IRequestHandler<GetGraphNodeByIdQuery, ValueTask<GraphNodeDto?>>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public GetGraphNodeByIdHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
     public async ValueTask<GraphNodeDto?> Handle(GetGraphNodeByIdQuery request, CancellationToken cancellationToken)
     {
@@ -37,14 +32,9 @@ public class GetGraphNodeByIdHandler : IRequestHandler<GetGraphNodeByIdQuery, Va
 
 public record GetAllGraphNodesQuery(NodeType? Type = null) : IRequest<GetAllGraphNodesQuery, ValueTask<IReadOnlyList<GraphNodeDto>>>;
 
-public class GetAllGraphNodesHandler : IRequestHandler<GetAllGraphNodesQuery, ValueTask<IReadOnlyList<GraphNodeDto>>>
+public class GetAllGraphNodesHandler(IUnitOfWork unitOfWork) : IRequestHandler<GetAllGraphNodesQuery, ValueTask<IReadOnlyList<GraphNodeDto>>>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public GetAllGraphNodesHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
     public async ValueTask<IReadOnlyList<GraphNodeDto>> Handle(GetAllGraphNodesQuery request, CancellationToken cancellationToken)
     {

@@ -27,7 +27,7 @@ public record GraphNodeDto
 {
     public Guid Id { get; init; }
     public NodeType Type { get; init; }
-    public Dictionary<string, object> Properties { get; init; } = new();
+    public Dictionary<string, object> Properties { get; init; } = [];
     public DateTime CreatedAt { get; init; }
 }
 
@@ -37,13 +37,13 @@ public record GraphEdgeDto
     public EdgeType Type { get; init; }
     public Guid SourceId { get; init; }
     public Guid TargetId { get; init; }
-    public Dictionary<string, object> Properties { get; init; } = new();
+    public Dictionary<string, object> Properties { get; init; } = [];
     public DateTime CreatedAt { get; init; }
 }
 
 public record PaginatedResult<T>
 {
-    public IReadOnlyList<T> Items { get; init; } = Array.Empty<T>();
+    public IReadOnlyList<T> Items { get; init; } = [];
     public int TotalCount { get; init; }
     public int Page { get; init; }
     public int PageSize { get; init; }

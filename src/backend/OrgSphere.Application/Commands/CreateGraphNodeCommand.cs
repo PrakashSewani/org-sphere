@@ -9,14 +9,9 @@ namespace OrgSphere.Application.Commands;
 
 public record CreateGraphNodeCommand(NodeType Type, Dictionary<string, object> Properties) : IRequest<CreateGraphNodeCommand, ValueTask<GraphNodeDto>>;
 
-public class CreateGraphNodeHandler : IRequestHandler<CreateGraphNodeCommand, ValueTask<GraphNodeDto>>
+public class CreateGraphNodeHandler(IUnitOfWork unitOfWork) : IRequestHandler<CreateGraphNodeCommand, ValueTask<GraphNodeDto>>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public CreateGraphNodeHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
     public async ValueTask<GraphNodeDto> Handle(CreateGraphNodeCommand request, CancellationToken cancellationToken)
     {

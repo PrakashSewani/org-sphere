@@ -8,14 +8,9 @@ namespace OrgSphere.Application.Commands;
 
 public record CreateTenantCommand(string Name, string Slug) : IRequest<CreateTenantCommand, ValueTask<TenantDto>>;
 
-public class CreateTenantHandler : IRequestHandler<CreateTenantCommand, ValueTask<TenantDto>>
+public class CreateTenantHandler(IUnitOfWork unitOfWork) : IRequestHandler<CreateTenantCommand, ValueTask<TenantDto>>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public CreateTenantHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
     public async ValueTask<TenantDto> Handle(CreateTenantCommand request, CancellationToken cancellationToken)
     {

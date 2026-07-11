@@ -7,14 +7,9 @@ using OrgSphere.Infrastructure.Persistence;
 
 namespace OrgSphere.Infrastructure.Repositories;
 
-public class TenantRepository : ITenantRepository
+public class TenantRepository(INeo4jContext context) : ITenantRepository
 {
-    private readonly INeo4jContext _context;
-
-    public TenantRepository(INeo4jContext context)
-    {
-        _context = context;
-    }
+    private readonly INeo4jContext _context = context;
 
     public async Task<Tenant?> GetByIdAsync(TenantId id, CancellationToken cancellationToken = default)
     {

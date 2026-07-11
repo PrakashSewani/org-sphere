@@ -7,14 +7,9 @@ using OrgSphere.Infrastructure.Persistence;
 
 namespace OrgSphere.Infrastructure.Repositories;
 
-public class UserRepository : IUserRepository
+public class UserRepository(INeo4jContext context) : IUserRepository
 {
-    private readonly INeo4jContext _context;
-
-    public UserRepository(INeo4jContext context)
-    {
-        _context = context;
-    }
+    private readonly INeo4jContext _context = context;
 
     public async Task<User?> GetByIdAsync(UserId id, TenantId tenantId, CancellationToken cancellationToken = default)
     {
@@ -48,7 +43,7 @@ public class UserRepository : IUserRepository
             new { tenantId = tenantId.Value.ToString() });
 
         var records = await result.ToListAsync(cancellationToken);
-        return records.Select(MapToEntity).ToList();
+        return [.. records.Select(MapToEntity)];
     }
 
     public async Task<User> CreateAsync(User user, CancellationToken cancellationToken = default)
