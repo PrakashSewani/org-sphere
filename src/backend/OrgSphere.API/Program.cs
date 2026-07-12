@@ -13,6 +13,7 @@ using OrgSphere.Infrastructure.DependencyInjection;
 using OrgSphere.Infrastructure.Events;
 using OrgSphere.Infrastructure.Services;
 using Serilog;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,11 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<RedisSettings>(builder.Configuration.GetSection("Redis"));
+
+var redisSettings = builder.Configuration.GetSection("Redis").Get<RedisSettings>()!;
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(redisSettings.ConnectionString));
 
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
 builder.Services.AddAuthentication(options =>
@@ -55,7 +61,7 @@ builder.Services.AddApplication();
 
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IEventBus, InMemoryEventBus>();
-builder.Services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
+builder.Services.AddScoped<IRefreshTokenStore, RedisRefreshTokenStore>();
 builder.Services.AddScoped<OrgSphere.Application.Services.IAuthService, AuthService>();
 builder.Services.AddScoped<IGraphService, GraphService>();
 builder.Services.AddScoped<IAuthorizationService, OrgSphere.Application.Services.AuthorizationService>();
