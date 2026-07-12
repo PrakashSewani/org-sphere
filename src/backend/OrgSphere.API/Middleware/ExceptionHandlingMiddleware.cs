@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using FluentValidation;
+using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace OrgSphere.API.Middleware;
 

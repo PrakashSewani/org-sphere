@@ -7,6 +7,7 @@ using OrgSphere.Application.Queries;
 using OrgSphere.Domain.Enums;
 using OrgSphere.Domain.Interfaces;
 using OrgSphere.Domain.ValueObjects;
+using NodeType = OrgSphere.Domain.Enums.NodeType;
 
 namespace OrgSphere.API.Controllers;
 
