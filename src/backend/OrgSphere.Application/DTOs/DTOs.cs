@@ -1,4 +1,5 @@
 using OrgSphere.Domain.Enums;
+using OrgSphere.Domain.ValueObjects;
 
 namespace OrgSphere.Application.DTOs;
 
@@ -47,5 +48,5 @@ public record PaginatedResult<T>
     public int TotalCount { get; init; }
     public int Page { get; init; }
     public int PageSize { get; init; }
-    public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling(TotalCount / (double)PageSize) : 0;
 }

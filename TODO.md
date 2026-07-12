@@ -33,23 +33,23 @@
 
 - [x] **TODO-005**: Set up graph database (Neo4j) with Docker (docker-compose.yml)
 - [x] **TODO-006**: Set up relational database (PostgreSQL) with Docker
-- [ ] **TODO-007**: Create database migration system
-- [ ] **TODO-008**: Create seed data system for development
+- [x] **TODO-007**: Create database migration system
+- [x] **TODO-008**: Create seed data system for development
 
 ### Core Services
 
-- [ ] **TODO-009**: Build multi-tenant middleware (tenant context injection, isolation)
-- [ ] **TODO-010**: Build core graph service (createNode, createEdge, traverse, query)
-- [ ] **TODO-011**: Build event bus service (publish, subscribe, event store)
-- [ ] **TODO-012**: Build authentication service (JWT, login, register, refresh)
-- [ ] **TODO-013**: Build authorization service (RBAC, permission checks)
+- [x] **TODO-009**: Build multi-tenant middleware (tenant context injection, isolation)
+- [x] **TODO-010**: Build core graph service (createNode, createEdge, traverse, query)
+- [x] **TODO-011**: Build event bus service (publish, subscribe, event store)
+- [x] **TODO-012**: Build authentication service (JWT, login, register, refresh)
+- [x] **TODO-013**: Build authorization service (RBAC, permission checks)
 
 ### Testing Foundation
 
-- [ ] **TODO-014**: Set up test framework (xUnit, test utilities, fixtures)
-- [ ] **TODO-015**: Write tests for graph service
-- [ ] **TODO-016**: Write tests for auth service
-- [ ] **TODO-017**: Write tests for multi-tenant isolation
+- [x] **TODO-014**: Set up test framework (xUnit, test utilities, fixtures)
+- [x] **TODO-015**: Write tests for graph service
+- [x] **TODO-016**: Write tests for auth service
+- [x] **TODO-017**: Write tests for multi-tenant isolation
 
 ---
 
@@ -250,20 +250,24 @@
 - [ ] **TODO-115**: Create onboarding flow for new tenants
 - [ ] **TODO-116**: Beta testing with real users
 
+### Cleanup
+
+- [ ] **TODO-117**: Remove Swagger (Swashbuckle), Swagger CORS policy, and dev-only Swagger middleware from production builds
+
 ---
 
 ## Progress
 
 | Phase | Total | Completed | Status |
 |-------|-------|-----------|--------|
-| Phase 1: Foundation | 16 | 4 | In Progress |
+| Phase 1: Foundation | 16 | 15 | In Progress |
 | Phase 2: Core Modules | 22 | 0 | Not Started |
 | Phase 3: Org Designer | 19 | 0 | Not Started |
 | Phase 4: UI & UX | 18 | 0 | Not Started |
 | Phase 5: Features | 14 | 0 | Not Started |
 | Phase 6: Business | 13 | 0 | Not Started |
-| Phase 7: Polish | 16 | 0 | Not Started |
-| **Total** | **118** | **4** | **3%** |
+| Phase 7: Polish | 17 | 0 | Not Started |
+| **Total** | **119** | **15** | **13%** |
 
 ---
 
