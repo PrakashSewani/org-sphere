@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using OrgSphere.API.GraphQL;
 using OrgSphere.API.Middleware;
 using OrgSphere.Application.DependencyInjection;
 using OrgSphere.Application.Services;
@@ -64,10 +65,24 @@ builder.Services.AddScoped<IEventBus, InMemoryEventBus>();
 builder.Services.AddScoped<IRefreshTokenStore, RedisRefreshTokenStore>();
 builder.Services.AddScoped<OrgSphere.Application.Services.IAuthService, AuthService>();
 builder.Services.AddScoped<IGraphService, GraphService>();
+builder.Services.AddScoped<IOrganizationGraphService, OrganizationGraphService>();
 builder.Services.AddScoped<IAuthorizationService, OrgSphere.Application.Services.AuthorizationService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services
+    .AddGraphQLServer()
+    .AddQueryType<OrganizationGraphQuery>()
+    .AddMutationType<OrganizationGraphMutation>()
+    .AddType<OrgSphere.Application.DTOs.CompanyDto>()
+    .AddType<OrgSphere.Application.DTOs.RegionDto>()
+    .AddType<OrgSphere.Application.DTOs.OfficeDto>()
+    .AddType<OrgSphere.Application.DTOs.DepartmentDto>()
+    .AddType<OrgSphere.Application.DTOs.TeamDto>()
+    .AddType<OrgSphere.Application.DTOs.OrgEmployeeDto>()
+    .AddType<OrgSphere.Application.DTOs.GraphEdgeDto>()
+    .AddType<OrgSphere.Domain.Enums.EdgeType>();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -129,6 +144,7 @@ app.UseMiddleware<TenantContextMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapGraphQL("/graphql");
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
 

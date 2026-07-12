@@ -57,10 +57,10 @@
 
 ### Organization Graph
 
-- [ ] **TODO-017**: Build Organization Graph schema (Company, Region, Office, Department, Team, Employee nodes)
-- [ ] **TODO-018**: Build Organization Graph API (CRUD for all entity types)
-- [ ] **TODO-019**: Build Organization Graph resolvers (GraphQL)
-- [ ] **TODO-020**: Write tests for Organization Graph
+- [x] **TODO-017**: Build Organization Graph schema (Company, Region, Office, Department, Team, Employee nodes)
+- [x] **TODO-018**: Build Organization Graph API (CRUD for all entity types)
+- [x] **TODO-019**: Build Organization Graph resolvers (GraphQL)
+- [x] **TODO-020**: Write tests for Organization Graph
 
 ### Employee Management
 
@@ -260,14 +260,14 @@
 
 | Phase | Total | Completed | Status |
 |-------|-------|-----------|--------|
-| Phase 1: Foundation | 16 | 15 | In Progress |
-| Phase 2: Core Modules | 22 | 0 | Not Started |
+| Phase 1: Foundation | 17 | 17 | Complete |
+| Phase 2: Core Modules | 22 | 4 | In Progress |
 | Phase 3: Org Designer | 19 | 0 | Not Started |
 | Phase 4: UI & UX | 18 | 0 | Not Started |
 | Phase 5: Features | 14 | 0 | Not Started |
 | Phase 6: Business | 13 | 0 | Not Started |
 | Phase 7: Polish | 17 | 0 | Not Started |
-| **Total** | **119** | **15** | **13%** |
+| **Total** | **120** | **21** | **18%** |
 
 ---
 
