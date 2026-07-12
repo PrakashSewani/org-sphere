@@ -35,6 +35,18 @@ public class UserRepository(INeo4jContext context) : IUserRepository
         return record is null ? null : MapToEntity(record);
     }
 
+    public async Task<User?> GetByEmailGlobalAsync(string email, CancellationToken cancellationToken = default)
+    {
+        await using var session = _context.AsyncSession();
+        var result = await session.RunAsync(
+            "MATCH (u:User {Email: $email}) RETURN u LIMIT 1",
+            new { email });
+
+        var records = await result.ToListAsync(cancellationToken);
+        var record = records.FirstOrDefault();
+        return record is null ? null : MapToEntity(record);
+    }
+
     public async Task<IEnumerable<User>> GetAllAsync(TenantId tenantId, CancellationToken cancellationToken = default)
     {
         await using var session = _context.AsyncSession();

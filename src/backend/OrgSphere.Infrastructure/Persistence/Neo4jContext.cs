@@ -15,7 +15,6 @@ public class Neo4jContext(IDriver driver) : INeo4jContext
 
     public void Dispose()
     {
-        _driver?.Dispose();
         GC.SuppressFinalize(this);
     }
 }

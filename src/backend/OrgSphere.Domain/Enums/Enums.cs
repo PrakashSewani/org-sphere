@@ -14,7 +14,8 @@ public enum UserRole
     Admin,
     HR,
     Manager,
-    Employee
+    Employee,
+    Contractor
 }
 
 public enum NodeType

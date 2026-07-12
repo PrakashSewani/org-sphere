@@ -1,0 +1,68 @@
+using OrgSphere.Domain.Enums;
+using OrgSphere.Domain.ValueObjects;
+
+namespace OrgSphere.Domain.Events;
+
+public interface IDomainEvent
+{
+    Guid EventId { get; }
+    string EventType { get; }
+    TenantId TenantId { get; }
+    DateTime OccurredAt { get; }
+}
+
+public record NodeCreatedEvent(TenantId TenantId, NodeId NodeId, NodeType Type) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Node.Created";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record NodeUpdatedEvent(TenantId TenantId, NodeId NodeId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Node.Updated";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record NodeDeletedEvent(TenantId TenantId, NodeId NodeId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Node.Deleted";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record EdgeCreatedEvent(TenantId TenantId, EdgeId EdgeId, EdgeType Type, NodeId SourceId, NodeId TargetId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Edge.Created";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record EdgeDeletedEvent(TenantId TenantId, EdgeId EdgeId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Edge.Deleted";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record UserCreatedEvent(TenantId TenantId, UserId UserId, string Email) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "User.Created";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record UserLoginEvent(TenantId TenantId, UserId UserId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "User.Login";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record TenantCreatedEvent(TenantId TenantId, string Name) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Tenant.Created";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
