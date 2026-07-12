@@ -46,10 +46,10 @@
 
 ### Testing Foundation
 
-- [ ] **TODO-014**: Set up test framework (xUnit, test utilities, fixtures)
-- [ ] **TODO-015**: Write tests for graph service
-- [ ] **TODO-016**: Write tests for auth service
-- [ ] **TODO-017**: Write tests for multi-tenant isolation
+- [x] **TODO-014**: Set up test framework (xUnit, test utilities, fixtures)
+- [x] **TODO-015**: Write tests for graph service
+- [x] **TODO-016**: Write tests for auth service
+- [x] **TODO-017**: Write tests for multi-tenant isolation
 
 ---
 
@@ -260,14 +260,14 @@
 
 | Phase | Total | Completed | Status |
 |-------|-------|-----------|--------|
-| Phase 1: Foundation | 16 | 11 | In Progress |
+| Phase 1: Foundation | 16 | 15 | In Progress |
 | Phase 2: Core Modules | 22 | 0 | Not Started |
 | Phase 3: Org Designer | 19 | 0 | Not Started |
 | Phase 4: UI & UX | 18 | 0 | Not Started |
 | Phase 5: Features | 14 | 0 | Not Started |
 | Phase 6: Business | 13 | 0 | Not Started |
 | Phase 7: Polish | 17 | 0 | Not Started |
-| **Total** | **119** | **11** | **9%** |
+| **Total** | **119** | **15** | **13%** |
 
 ---
 
