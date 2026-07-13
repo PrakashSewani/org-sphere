@@ -100,9 +100,9 @@ The graph is the primary data store. Consider:
 ### Application Layer
 
 - API-first design
-- REST + GraphQL
-- WebSocket for real-time
-- Server-Sent Events for updates
+- REST for all CRUD operations
+- SignalR for real-time graph updates
+- Event-driven inter-service communication
 
 ### Frontend
 

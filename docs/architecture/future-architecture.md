@@ -13,7 +13,7 @@ OrgSphere's architecture will evolve as the platform grows. This document outlin
 - Core Organization Graph
 - Basic modules (Employee, Leave, Attendance)
 - Single-region deployment
-- Relational + Graph database
+- Neo4j (graph) + Redis (cache)
 
 ### Architecture
 
@@ -166,7 +166,6 @@ Single-modal → Multi-modal
 
 ### Future
 
-- GraphQL API
 - Event streaming
 - Plugin marketplace
 - AI-powered integrations
@@ -174,7 +173,7 @@ Single-modal → Multi-modal
 ### Architecture
 
 ```
-REST → GraphQL + REST
+REST + SignalR → Event streaming
 Pull-based → Push-based (webhooks, SSE)
 Manual → Automated
 Closed → Open ecosystem

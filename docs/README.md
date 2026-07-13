@@ -97,7 +97,11 @@ OrgSphere is a graph-native Organization Operating Platform (OrgOS) that models 
 
 | Document | Purpose |
 |----------|---------|
-| [ADR-001](decisions/ADR-001.md) | First architecture decision |
+| [ADR-001](decisions/ADR-001.md) | Graph-native architecture |
+| [ADR-002](decisions/ADR-002.md) | Multi-tenant SaaS |
+| [ADR-003](decisions/ADR-003.md) | Event-driven architecture |
+| [ADR-004](decisions/ADR-004.md) | Backend technology stack (.NET 10) |
+| [ADR-005](decisions/ADR-005.md) | Separated billing architecture |
 
 ### Backlog
 

@@ -15,6 +15,15 @@ Load this skill when working with the Organization Graph, creating entities, rel
 
 ---
 
+## Tech Stack
+
+- **Graph DB**: Neo4j 5.x with Cypher query language
+- **Driver**: `Neo4j.Driver` NuGet package
+- **Repository Pattern**: `GraphNodeRepository`, `GraphEdgeRepository`
+- **Events**: Domain events published via `IEventBus`
+
+---
+
 ## Graph Concepts
 
 ### Nodes
@@ -48,213 +57,220 @@ Every relationship is an edge:
 
 ## Creating Nodes
 
-### Template
+### Using the Service Layer
 
-```typescript
-interface CreateNodeInput {
-  type: string;          // Node type (e.g., 'Employee')
-  tenantId: string;      // Required for multi-tenancy
-  properties: Record<string, any>;
-  metadata?: Record<string, any>;
-}
-
-async function createNode(input: CreateNodeInput): Promise<Node> {
-  // Validate tenant context
-  validateTenantContext(input.tenantId);
-
-  // Validate node type
-  validateNodeType(input.type);
-
-  // Create node
-  const node = await graphDB.createNode({
-    ...input,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  });
-
-  // Publish event
-  await eventBus.publish({
-    type: `${input.type.toLowerCase()}.created`,
-    tenantId: input.tenantId,
-    data: { nodeId: node.id, ...input.properties }
-  });
-
-  return node;
+```csharp
+// Via OrganizationGraphService (preferred)
+public async Task<CompanyDto> CreateCompanyAsync(
+    CreateCompanyRequest request,
+    CancellationToken ct = default)
+{
+    var props = new Dictionary<string, object>
+    {
+        ["Name"] = request.Name,
+        ["Industry"] = request.Industry,
+        ["EmployeeCount"] = request.EmployeeCount
+    };
+    var node = await CreateTypedNodeAsync(NodeType.Company, props, ct);
+    return MapToCompanyDto(node);
 }
 ```
 
-### Examples
+### Direct Neo4j Cypher (for complex operations)
 
-```typescript
-// Create Employee
-await createNode({
-  type: 'Employee',
-  tenantId: 'tenant-123',
-  properties: {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john@company.com',
-    title: 'Software Engineer',
-    employeeId: 'EMP-001'
-  }
-});
+```csharp
+// In repository for custom queries
+public async Task<GraphNode> CreateNodeAsync(
+    GraphNode node,
+    CancellationToken ct = default)
+{
+    var query = @"
+        CREATE (n:Node {
+            id: $id,
+            tenantId: $tenantId,
+            type: $type,
+            createdAt: $createdAt,
+            updatedAt: $updatedAt
+        })
+        SET n += $properties
+        RETURN n";
 
-// Create Department
-await createNode({
-  type: 'Department',
-  tenantId: 'tenant-123',
-  properties: {
-    name: 'Engineering',
-    description: 'Product engineering team'
-  }
-});
+    var result = await _session.RunAsync(query, new
+    {
+        id = node.Id.Value.ToString(),
+        tenantId = node.TenantId.Value.ToString(),
+        type = node.Type.ToString(),
+        createdAt = node.CreatedAt,
+        updatedAt = node.UpdatedAt,
+        properties = node.Properties
+    });
+
+    return node;
+}
+```
+
+### REST API Call
+
+```http
+POST /api/organizationgraph/companies
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "name": "Acme Corp",
+  "industry": "Technology",
+  "employeeCount": 500
+}
 ```
 
 ---
 
 ## Creating Edges
 
-### Template
+### Using the Service Layer
 
-```typescript
-interface CreateEdgeInput {
-  type: string;          // Edge type (e.g., 'REPORTS_TO')
-  sourceId: string;      // Source node ID
-  targetId: string;      // Target node ID
-  tenantId: string;      // Required for multi-tenancy
-  properties?: Record<string, any>;
-}
+```csharp
+// Create reporting relationship
+public async Task<GraphEdgeDto> CreateEdgeAsync(
+    EdgeType type,
+    Guid sourceId,
+    Guid targetId,
+    CancellationToken ct = default)
+{
+    var tenantId = _tenantContext.TenantId!;
+    var source = await _unitOfWork.GraphNodes.GetByIdAsync(
+        new NodeId(sourceId), tenantId, ct)
+        ?? throw new KeyNotFoundException($"Source node {sourceId} not found");
+    var target = await _unitOfWork.GraphNodes.GetByIdAsync(
+        new NodeId(targetId), tenantId, ct)
+        ?? throw new KeyNotFoundException($"Target node {targetId} not found");
 
-async function createEdge(input: CreateEdgeInput): Promise<Edge> {
-  // Validate tenant context
-  validateTenantContext(input.tenantId);
+    var edge = new GraphEdge
+    {
+        TenantId = tenantId,
+        Type = type,
+        SourceId = source.Id,
+        TargetId = target.Id,
+        Properties = []
+    };
 
-  // Validate nodes exist and belong to tenant
-  await validateNodesBelongToTenant(
-    input.sourceId,
-    input.targetId,
-    input.tenantId
-  );
-
-  // Validate relationship rules
-  await validateRelationshipRules(input);
-
-  // Create edge
-  const edge = await graphDB.createEdge({
-    ...input,
-    createdAt: new Date()
-  });
-
-  // Publish event
-  await eventBus.publish({
-    type: `relationship.created`,
-    tenantId: input.tenantId,
-    data: {
-      edgeType: input.type,
-      sourceId: input.sourceId,
-      targetId: input.targetId
-    }
-  });
-
-  return edge;
+    var created = await _unitOfWork.GraphEdges.CreateAsync(edge, ct);
+    await _unitOfWork.SaveChangesAsync(ct);
+    await _eventBus.PublishAsync(
+        new EdgeCreatedEvent(tenantId, created.Id, type, source.Id, target.Id), ct);
+    return MapToEdgeDto(created);
 }
 ```
 
-### Examples
+### REST API Call
 
-```typescript
-// Create reporting relationship
-await createEdge({
-  type: 'REPORTS_TO',
-  sourceId: 'emp-001',
-  targetId: 'emp-002',
-  tenantId: 'tenant-123'
-});
+```http
+POST /api/organizationgraph/edges
+Content-Type: application/json
+Authorization: Bearer {token}
 
-// Create team membership
-await createEdge({
-  type: 'MEMBER_OF',
-  sourceId: 'emp-001',
-  targetId: 'team-001',
-  tenantId: 'tenant-123',
-  properties: {
-    role: 'member',
-    joinedAt: new Date()
-  }
-});
+{
+  "type": "REPORTS_TO",
+  "sourceId": "emp-001-guid",
+  "targetId": "mgr-001-guid"
+}
 ```
 
 ---
 
 ## Graph Traversal Queries
 
-### Find All Reports (Recursive)
+### Find All Reports (Recursive Cypher)
 
-```typescript
-async function findAllReports(
-  managerId: string,
-  tenantId: string
-): Promise<Node[]> {
-  return graphDB.traverse({
-    start: managerId,
-    relationship: 'REPORTS_TO',
-    direction: 'INCOMING',
-    depth: 'recursive',  // Unlimited depth
-    tenantId
-  });
+```csharp
+// In repository
+public async Task<IReadOnlyList<GraphNode>> FindAllReportsAsync(
+    Guid managerId,
+    TenantId tenantId,
+    CancellationToken ct = default)
+{
+    var query = @"
+        MATCH (manager:Node {id: $managerId, tenantId: $tenantId})-[:REPORTS_TO*]->(report:Node)
+        WHERE report.type = 'Employee'
+        RETURN report";
+
+    var result = await _session.RunAsync(query, new
+    {
+        managerId = managerId.ToString(),
+        tenantId = tenantId.Value.ToString()
+    });
+
+    return await result.ToListAsync(ct);
 }
 ```
 
 ### Find Direct Reports
 
-```typescript
-async function findDirectReports(
-  managerId: string,
-  tenantId: string
-): Promise<Node[]> {
-  return graphDB.traverse({
-    start: managerId,
-    relationship: 'REPORTS_TO',
-    direction: 'INCOMING',
-    depth: 1,  // Only direct reports
-    tenantId
-  });
+```csharp
+public async Task<IReadOnlyList<GraphNode>> FindDirectReportsAsync(
+    Guid managerId,
+    TenantId tenantId,
+    CancellationToken ct = default)
+{
+    var query = @"
+        MATCH (report:Node)-[:REPORTS_TO]->(manager:Node {id: $managerId, tenantId: $tenantId})
+        WHERE report.type = 'Employee'
+        RETURN report";
+
+    var result = await _session.RunAsync(query, new
+    {
+        managerId = managerId.ToString(),
+        tenantId = tenantId.Value.ToString()
+    });
+
+    return await result.ToListAsync(ct);
 }
 ```
 
 ### Find Team Members
 
-```typescript
-async function findTeamMembers(
-  teamId: string,
-  tenantId: string
-): Promise<Node[]> {
-  return graphDB.traverse({
-    start: teamId,
-    relationship: 'MEMBER_OF',
-    direction: 'INCOMING',
-    depth: 1,
-    tenantId
-  });
+```csharp
+public async Task<IReadOnlyList<GraphNode>> FindTeamMembersAsync(
+    Guid teamId,
+    TenantId tenantId,
+    CancellationToken ct = default)
+{
+    var query = @"
+        MATCH (member:Node)-[:MEMBER_OF]->(team:Node {id: $teamId, tenantId: $tenantId})
+        WHERE member.type = 'Employee'
+        RETURN member";
+
+    var result = await _session.RunAsync(query, new
+    {
+        teamId = teamId.ToString(),
+        tenantId = tenantId.Value.ToString()
+    });
+
+    return await result.ToListAsync(ct);
 }
 ```
 
 ### Find Department Hierarchy
 
-```typescript
-async function findDepartmentHierarchy(
-  departmentId: string,
-  tenantId: string
-): Promise<GraphResult> {
-  return graphDB.query({
-    query: `
-      MATCH (dept:Department {id: $deptId})<-[:CONTAINS]-(team:Team)
-      MATCH (team)<-[:MEMBER_OF]-(emp:Employee)
-      RETURN dept, team, collect(emp) as members
-    `,
-    params: { deptId: departmentId },
-    tenantId
-  });
+```csharp
+public async Task<object> FindDepartmentHierarchyAsync(
+    Guid departmentId,
+    TenantId tenantId,
+    CancellationToken ct = default)
+{
+    var query = @"
+        MATCH (dept:Node {id: $deptId, tenantId: $tenantId, type: 'Department'})
+        OPTIONAL MATCH (dept)<-[:CONTAINS]-(team:Node)
+        OPTIONAL MATCH (team)<-[:MEMBER_OF]-(emp:Node)
+        RETURN dept, collect(DISTINCT team) as teams, collect(DISTINCT emp) as members";
+
+    var result = await _session.RunAsync(query, new
+    {
+        deptId = departmentId.ToString(),
+        tenantId = tenantId.Value.ToString()
+    });
+
+    return await result.SingleAsync(ct);
 }
 ```
 
@@ -264,40 +280,37 @@ async function findDepartmentHierarchy(
 
 ### Circular Reference Prevention
 
-```typescript
-async function wouldCreateCycle(
-  sourceId: string,
-  targetId: string,
-  relationshipType: string,
-  tenantId: string
-): Promise<boolean> {
-  // Check if target is already an ancestor of source
-  const ancestors = await graphDB.traverse({
-    start: sourceId,
-    relationship: relationshipType,
-    direction: 'OUTGOING',
-    tenantId
-  });
+```csharp
+public async Task<bool> WouldCreateCycleAsync(
+    Guid sourceId,
+    Guid targetId,
+    EdgeType relationshipType,
+    TenantId tenantId,
+    CancellationToken ct = default)
+{
+    var query = @"
+        MATCH path = (source:Node {id: $sourceId, tenantId: $tenantId})
+                     -[:{relationshipType}*]->(target:Node {id: $targetId})
+        RETURN count(path) > 0 as hasCycle";
 
-  return ancestors.some(node => node.id === targetId);
+    var result = await _session.RunAsync(query, new
+    {
+        sourceId = sourceId.ToString(),
+        targetId = targetId.ToString(),
+        tenantId = tenantId.Value.ToString()
+    });
+
+    var record = await result.SingleAsync(ct);
+    return record["hasCycle"].As<bool>();
 }
 ```
 
 ### Tenant Isolation
 
-```typescript
-async function validateNodesBelongToTenant(
-  nodeIds: string[],
-  tenantId: string
-): Promise<void> {
-  const nodes = await graphDB.getNodes(nodeIds);
-
-  for (const node of nodes) {
-    if (node.tenantId !== tenantId) {
-      throw new Error('Access denied: node belongs to different tenant');
-    }
-  }
-}
+```csharp
+// Every query MUST include tenantId filter
+// BAD:  MATCH (n:Node {id: $id})
+// GOOD: MATCH (n:Node {id: $id, tenantId: $tenantId})
 ```
 
 ---
@@ -306,40 +319,68 @@ async function validateNodesBelongToTenant(
 
 ### Span of Control
 
-```typescript
-async function calculateSpanOfControl(
-  tenantId: string
-): Promise<Metric[]> {
-  return graphDB.query({
-    query: `
-      MATCH (mgr:Employee)<-[:REPORTS_TO]-(report:Employee)
-      WITH mgr, count(report) as reports
-      RETURN mgr.name, reports
-      ORDER BY reports DESC
-    `,
-    tenantId
-  });
+```csharp
+public async Task<List<(string ManagerName, int ReportCount)>> CalculateSpanOfControlAsync(
+    TenantId tenantId,
+    CancellationToken ct = default)
+{
+    var query = @"
+        MATCH (mgr:Node {tenantId: $tenantId, type: 'Employee'})<-[:REPORTS_TO]-(report:Node)
+        WHERE report.type = 'Employee'
+        WITH mgr, count(report) as reports
+        RETURN mgr.properties.Name as name, reports
+        ORDER BY reports DESC";
+
+    var result = await _session.RunAsync(query, new
+    {
+        tenantId = tenantId.Value.ToString()
+    });
+
+    return await result.ToListAsync(r => (
+        r["name"].As<string>(),
+        r["reports"].As<int>()), ct);
 }
 ```
 
 ### Organization Depth
 
-```typescript
-async function calculateOrgDepth(
-  tenantId: string
-): Promise<number> {
-  const result = await graphDB.query({
-    query: `
-      MATCH path = (ceo:Employee)-[:REPORTS_TO*]->(emp:Employee)
-      WHERE NOT (emp)-[:REPORTS_TO]->()
-      RETURN length(path) as depth
-      ORDER BY depth DESC
-      LIMIT 1
-    `,
-    tenantId
-  });
+```csharp
+public async Task<int> CalculateOrgDepthAsync(
+    TenantId tenantId,
+    CancellationToken ct = default)
+{
+    var query = @"
+        MATCH path = (ceo:Node {tenantId: $tenantId, type: 'Employee'})
+                     -[:REPORTS_TO*]->(emp:Node)
+        WHERE NOT (emp)-[:REPORTS_TO]->()
+        RETURN length(path) as depth
+        ORDER BY depth DESC
+        LIMIT 1";
 
-  return result[0]?.depth ?? 0;
+    var result = await _session.RunAsync(query, new
+    {
+        tenantId = tenantId.Value.ToString()
+    });
+
+    var record = await result.FirstOrDefaultAsync(ct);
+    return record?["depth"].As<int>() ?? 0;
+}
+```
+
+---
+
+## SignalR Real-Time Updates
+
+When a graph mutation occurs, the `GraphEventRelay` automatically broadcasts to connected clients:
+
+```csharp
+// Client connects to /hubs/graph
+// Receives events like:
+{
+  "eventType": "Node.Created",
+  "eventId": "...",
+  "occurredAt": "2025-01-15T10:30:00Z",
+  "data": { "nodeType": "Employee", "nodeId": "..." }
 }
 ```
 
@@ -349,16 +390,16 @@ async function calculateOrgDepth(
 
 ### Don't
 
-- Forget tenantId in queries
-- Create edges without validating nodes
-- Allow circular references
-- Skip event publishing
-- Hardcode node types
+- Forget `tenantId` in Cypher queries (security violation)
+- Create edges without validating both nodes exist
+- Allow circular references in REPORTS_TO chains
+- Skip event publishing after mutations
+- Hardcode node types as strings (use `NodeType` enum)
 
 ### Do
 
-- Always validate tenant context
-- Publish events for all changes
-- Use parameterized queries
-- Handle errors explicitly
-- Log graph operations
+- Always validate tenant context via `ITenantContext`
+- Publish domain events for all graph mutations
+- Use parameterized Cypher queries (never string concatenation)
+- Handle errors explicitly with proper HTTP status codes
+- Log graph operations for audit trail

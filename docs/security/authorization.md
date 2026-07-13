@@ -219,6 +219,5 @@ CEO → VP → Director → Manager → Employee
 Authorization middleware:
 
 - All API endpoints
-- GraphQL resolvers
-- WebSocket connections
+- SignalR hub connections
 - Background jobs

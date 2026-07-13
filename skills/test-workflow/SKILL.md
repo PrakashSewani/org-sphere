@@ -14,6 +14,15 @@ Load this skill when writing or running tests for OrgSphere.
 
 ---
 
+## Tech Stack
+
+- **Test Framework**: xUnit
+- **Mocking**: Moq
+- **Integration Tests**: WebApplicationFactory
+- **Assertions**: xUnit assertions + FluentAssertions (optional)
+
+---
+
 ## Testing Strategy
 
 ### Test Pyramid
@@ -22,7 +31,7 @@ Load this skill when writing or running tests for OrgSphere.
         ┌─────────┐
         │   E2E   │  Few, slow, high confidence
         ├─────────┤
-        │Integration│  Moderate, test boundaries
+        │Integration│  Moderate, test API boundaries
         ├─────────┤
         │  Unit   │  Many, fast, focused
         └─────────┘
@@ -40,365 +49,403 @@ Load this skill when writing or running tests for OrgSphere.
 
 ### Service Tests
 
-```typescript
-// leave.service.test.ts
-import { LeaveService } from './service';
-import { mockGraph, mockEvents } from '../test-utils';
+```csharp
+// tests/OrgSphere.Tests/Services/LeaveServiceTests.cs
+using Moq;
+using OrgSphere.Application.Services;
+using OrgSphere.Domain.Entities;
+using OrgSphere.Domain.Enums;
+using OrgSphere.Domain.Events;
+using OrgSphere.Domain.Interfaces;
+using Xunit;
 
-describe('LeaveService', () => {
-  let service: LeaveService;
+namespace OrgSphere.Tests.Services;
 
-  beforeEach(() => {
-    service = new LeaveService(
-      mockGraph,
-      mockEvents,
-      mockRepository
-    );
-  });
+public class LeaveServiceTests
+{
+    private readonly Mock<ILeaveRepository> _repository = new();
+    private readonly Mock<IGraphService> _graphService = new();
+    private readonly Mock<IEventBus> _eventBus = new();
+    private readonly Mock<ITenantContext> _tenantContext = new();
+    private readonly LeaveService _sut;
 
-  describe('createRequest', () => {
-    it('should create leave request', async () => {
-      // Arrange
-      const input = {
-        employeeId: 'emp-001',
-        type: LeaveType.VACATION,
-        startDate: new Date('2025-02-01'),
-        endDate: new Date('2025-02-05')
-      };
-      const tenantId = 'tenant-123';
+    public LeaveServiceTests()
+    {
+        _tenantContext.Setup(t => t.TenantId).Returns(new TenantId(Guid.NewGuid()));
+        _sut = new LeaveService(
+            _repository.Object,
+            _graphService.Object,
+            _eventBus.Object,
+            _tenantContext.Object);
+    }
 
-      mockGraph.getNode.mockResolvedValue({
-        id: 'emp-001',
-        tenantId
-      });
+    [Fact]
+    public async Task CreateRequest_ShouldCreateLeaveRequest()
+    {
+        // Arrange
+        var command = new CreateLeaveRequestCommand(
+            EmployeeId: Guid.NewGuid(),
+            Type: LeaveType.Vacation,
+            StartDate: new DateTime(2025, 2, 1),
+            EndDate: new DateTime(2025, 2, 5),
+            Reason: "Holiday");
 
-      // Act
-      const result = await service.createRequest(input, tenantId);
+        _graphService.Setup(g => g.GetNodeAsync(
+                It.IsAny<Guid>(), It.IsAny<TenantId>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GraphNode { Id = new NodeId(command.EmployeeId) });
 
-      // Assert
-      expect(result).toBeDefined();
-      expect(result.status).toBe(LeaveStatus.PENDING);
-      expect(mockEvents.publish).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'leave.requested',
-          tenantId
-        })
-      );
-    });
+        _repository.Setup(r => r.CreateAsync(
+                It.IsAny<LeaveRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((LeaveRequest r, CancellationToken _) => r);
 
-    it('should throw if employee not found', async () => {
-      // Arrange
-      mockGraph.getNode.mockResolvedValue(null);
+        // Act
+        var result = await _sut.CreateRequestAsync(command);
 
-      // Act & Assert
-      await expect(
-        service.createRequest(input, tenantId)
-      ).rejects.toThrow('Employee not found');
-    });
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(LeaveStatus.Pending, result.Status);
+        _eventBus.Verify(e => e.PublishAsync(
+            It.IsAny<LeaveRequestedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
 
-    it('should throw if insufficient balance', async () => {
-      // Arrange
-      mockRepository.getBalance.mockResolvedValue({ available: 2 });
+    [Fact]
+    public async Task CreateRequest_ShouldThrowWhenEmployeeNotFound()
+    {
+        // Arrange
+        var command = new CreateLeaveRequestCommand(
+            EmployeeId: Guid.NewGuid(),
+            Type: LeaveType.Vacation,
+            StartDate: new DateTime(2025, 2, 1),
+            EndDate: new DateTime(2025, 2, 5),
+            Reason: null);
 
-      // Act & Assert
-      await expect(
-        service.createRequest({
-          ...input,
-          startDate: new Date('2025-02-01'),
-          endDate: new Date('2025-02-10')  // 10 days
-        }, tenantId)
-      ).rejects.toThrow('Insufficient leave balance');
-    });
-  });
+        _graphService.Setup(g => g.GetNodeAsync(
+                It.IsAny<Guid>(), It.IsAny<TenantId>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GraphNode?)null);
 
-  describe('approveRequest', () => {
-    it('should approve leave request', async () => {
-      // Arrange
-      const requestId = 'req-001';
-      const approvedBy = 'mgr-001';
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _sut.CreateRequestAsync(command));
+    }
 
-      mockRepository.findById.mockResolvedValue({
-        id: requestId,
-        employeeId: 'emp-001',
-        status: LeaveStatus.PENDING
-      });
+    [Fact]
+    public async Task ApproveRequest_ShouldUpdateStatus()
+    {
+        // Arrange
+        var requestId = Guid.NewGuid();
+        var approvedBy = Guid.NewGuid();
+        var existing = new LeaveRequest
+        {
+            Id = requestId,
+            Status = LeaveStatus.Pending,
+            EmployeeId = Guid.NewGuid()
+        };
 
-      // Act
-      const result = await service.approveRequest(
-        requestId,
-        approvedBy,
-        tenantId
-      );
+        _repository.Setup(r => r.GetByIdAsync(
+                It.IsAny<Guid>(), It.IsAny<TenantId>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
 
-      // Assert
-      expect(result.status).toBe(LeaveStatus.APPROVED);
-      expect(result.approvedBy).toBe(approvedBy);
-    });
-  });
-});
+        _repository.Setup(r => r.UpdateAsync(
+                It.IsAny<LeaveRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((LeaveRequest r, CancellationToken _) => r);
+
+        // Act
+        var result = await _sut.ApproveRequestAsync(requestId, approvedBy);
+
+        // Assert
+        Assert.Equal(LeaveStatus.Approved, result.Status);
+        Assert.Equal(approvedBy, result.ApprovedBy);
+    }
+}
 ```
 
 ### Graph Service Tests
 
-```typescript
-// graph.service.test.ts
-describe('GraphService', () => {
-  describe('createNode', () => {
-    it('should create node with tenant context', async () => {
-      const node = await graphService.createNode({
-        type: 'Employee',
-        tenantId: 'tenant-123',
-        properties: { name: 'John Doe' }
-      });
+```csharp
+// tests/OrgSphere.Tests/Services/GraphServiceTests.cs
+using Moq;
+using OrgSphere.Domain.Enums;
+using OrgSphere.Domain.Interfaces;
+using Xunit;
 
-      expect(node.tenantId).toBe('tenant-123');
-      expect(node.type).toBe('Employee');
-    });
+namespace OrgSphere.Tests.Services;
 
-    it('should reject node without tenant', async () => {
-      await expect(
-        graphService.createNode({
-          type: 'Employee',
-          properties: { name: 'John Doe' }
-        })
-      ).rejects.toThrow('tenantId is required');
-    });
-  });
+public class GraphServiceTests
+{
+    private readonly Mock<IGraphRepository> _graphRepo = new();
+    private readonly Mock<ITenantContext> _tenantContext = new();
+    private readonly GraphService _sut;
 
-  describe('traverse', () => {
-    it('should only return nodes from same tenant', async () => {
-      const results = await graphService.traverse({
-        start: 'emp-001',
-        relationship: 'REPORTS_TO',
-        direction: 'INCOMING',
-        tenantId: 'tenant-123'
-      });
+    public GraphServiceTests()
+    {
+        _tenantContext.Setup(t => t.TenantId).Returns(new TenantId(Guid.NewGuid()));
+        _sut = new GraphService(_graphRepo.Object, _tenantContext.Object);
+    }
 
-      results.forEach(node => {
-        expect(node.tenantId).toBe('tenant-123');
-      });
-    });
-  });
-});
+    [Fact]
+    public async Task CreateNode_ShouldEnforceTenantContext()
+    {
+        // Arrange
+        var props = new Dictionary<string, object> { ["Name"] = "John Doe" };
+
+        // Act
+        var node = await _sut.CreateNodeAsync(NodeType.Employee, props);
+
+        // Assert
+        Assert.Equal(_tenantContext.Object.TenantId, node.TenantId);
+    }
+
+    [Fact]
+    public async Task Traverse_ShouldOnlyReturnSameTenantNodes()
+    {
+        // Arrange
+        var managerId = new NodeId(Guid.NewGuid());
+
+        // Act
+        var results = await _sut.GetDirectReportsAsync(managerId.Value);
+
+        // Assert
+        foreach (var node in results)
+        {
+            Assert.Equal(_tenantContext.Object.TenantId, node.TenantId);
+        }
+    }
+}
 ```
 
 ---
 
 ## Integration Tests
 
-### API Tests
+### API Tests with WebApplicationFactory
 
-```typescript
-// leave.api.test.ts
-import request from 'supertest';
-import { app } from '../app';
+```csharp
+// tests/OrgSphere.Tests/Integration/LeaveApiTests.cs
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
+using OrgSphere.Application.DTOs;
+using Xunit;
 
-describe('Leave API', () => {
-  let authToken: string;
+namespace OrgSphere.Tests.Integration;
 
-  beforeEach(async () => {
-    // Setup test user and get auth token
-    authToken = await getAuthToken({
-      email: 'test@company.com',
-      role: 'manager'
-    });
-  });
+public class LeaveApiTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly HttpClient _client;
 
-  describe('POST /api/leave/requests', () => {
-    it('should create leave request', async () => {
-      const response = await request(app)
-        .post('/api/leave/requests')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({
-          employeeId: 'emp-001',
-          type: 'vacation',
-          startDate: '2025-02-01',
-          endDate: '2025-02-05'
-        });
+    public LeaveApiTests(WebApplicationFactory<Program> factory)
+    {
+        _client = factory.CreateClient();
+        // Add auth header for authenticated endpoints
+        _client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue(
+                "Bearer", TestAuthHelper.GetToken());
+    }
 
-      expect(response.status).toBe(201);
-      expect(response.body.status).toBe('pending');
-    });
+    [Fact]
+    public async Task PostLeaveRequest_ShouldReturn201()
+    {
+        // Arrange
+        var command = new CreateLeaveRequestCommand(
+            EmployeeId: Guid.NewGuid(),
+            Type: LeaveType.Vacation,
+            StartDate: new DateTime(2025, 2, 1),
+            EndDate: new DateTime(2025, 2, 5),
+            Reason: "Holiday");
 
-    it('should return 401 without auth', async () => {
-      const response = await request(app)
-        .post('/api/leave/requests')
-        .send({ /* ... */ });
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/leave/requests", command);
 
-      expect(response.status).toBe(401);
-    });
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<LeaveRequestDto>();
+        Assert.NotNull(result);
+        Assert.Equal(LeaveStatus.Pending, result!.Status);
+    }
 
-    it('should return 403 for unauthorized employee', async () => {
-      const response = await request(app)
-        .post('/api/leave/requests')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({
-          employeeId: 'emp-other-tenant',  // Different tenant
-          type: 'vacation',
-          startDate: '2025-02-01',
-          endDate: '2025-02-05'
-        });
+    [Fact]
+    public async Task PostLeaveRequest_ShouldReturn401WithoutAuth()
+    {
+        // Arrange
+        var unauthClient = new HttpClient();
+        unauthClient.BaseAddress = _client.BaseAddress;
 
-      expect(response.status).toBe(403);
-    });
-  });
-});
+        // Act
+        var response = await unauthClient.PostAsJsonAsync(
+            "/api/leave/requests",
+            new { });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetLeaveRequests_ShouldReturnList()
+    {
+        // Act
+        var response = await _client.GetAsync("/api/leave/requests");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var results = await response.Content.ReadFromJsonAsync<List<LeaveRequestDto>>();
+        Assert.NotNull(results);
+    }
+}
 ```
 
-### Database Tests
+### Database/Repository Tests (Neo4j)
 
-```typescript
-// leave.repository.test.ts
-describe('LeaveRepository', () => {
-  let db: Database;
+```csharp
+// tests/OrgSphere.Tests/Integration/LeaveRepositoryTests.cs
+using OrgSphere.Domain.Entities;
+using OrgSphere.Domain.Enums;
+using OrgSphere.Domain.ValueObjects;
+using OrgSphere.Infrastructure.Repositories;
+using Xunit;
 
-  beforeEach(async () => {
-    db = await createTestDatabase();
-    await db.migrate();
-  });
+namespace OrgSphere.Tests.Integration;
 
-  afterEach(async () => {
-    await db.cleanup();
-  });
+[Collection("Neo4j")]
+public class LeaveRepositoryTests : IDisposable
+{
+    private readonly Neo4jContext _context;
+    private readonly LeaveRepository _repository;
+    private readonly TenantId _tenantId = new(Guid.NewGuid());
 
-  describe('create', () => {
-    it('should create leave request in database', async () => {
-      const request = await repository.create({
-        employeeId: 'emp-001',
-        type: 'vacation',
-        startDate: new Date('2025-02-01'),
-        endDate: new Date('2025-02-05'),
-        tenantId: 'tenant-123'
-      });
+    public LeaveRepositoryTests()
+    {
+        _context = new Neo4jContext(/* test connection */);
+        _repository = new LeaveRepository(_context);
+    }
 
-      const found = await repository.findById(
-        request.id,
-        'tenant-123'
-      );
+    [Fact]
+    public async Task Create_ShouldPersistAndRetrieve()
+    {
+        // Arrange
+        var entity = new LeaveRequest
+        {
+            Id = Guid.NewGuid(),
+            TenantId = _tenantId,
+            EmployeeId = Guid.NewGuid(),
+            Type = LeaveType.Vacation,
+            StartDate = new DateTime(2025, 2, 1),
+            EndDate = new DateTime(2025, 2, 5),
+            Status = LeaveStatus.Pending,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
 
-      expect(found).toBeDefined();
-      expect(found.employeeId).toBe('emp-001');
-    });
+        // Act
+        await _repository.CreateAsync(entity);
+        var found = await _repository.GetByIdAsync(entity.Id, _tenantId);
 
-    it('should isolate data by tenant', async () => {
-      await repository.create({
-        employeeId: 'emp-001',
-        tenantId: 'tenant-123'
-      });
+        // Assert
+        Assert.NotNull(found);
+        Assert.Equal(entity.EmployeeId, found!.EmployeeId);
+    }
 
-      const found = await repository.findById(
-        request.id,
-        'tenant-other'  // Different tenant
-      );
+    [Fact]
+    public async Task GetById_ShouldIsolateByTenant()
+    {
+        // Arrange
+        var entity = new LeaveRequest
+        {
+            Id = Guid.NewGuid(),
+            TenantId = _tenantId,
+            EmployeeId = Guid.NewGuid(),
+            Type = LeaveType.Sick,
+            StartDate = DateTime.UtcNow,
+            EndDate = DateTime.UtcNow,
+            Status = LeaveStatus.Pending,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        await _repository.CreateAsync(entity);
 
-      expect(found).toBeNull();
-    });
-  });
-});
-```
+        // Act - query with different tenant
+        var otherTenant = new TenantId(Guid.NewGuid());
+        var found = await _repository.GetByIdAsync(entity.Id, otherTenant);
 
----
+        // Assert
+        Assert.Null(found);
+    }
 
-## E2E Tests
-
-### User Journey Tests
-
-```typescript
-// leave-journey.e2e.test.ts
-describe('Leave Request Journey', () => {
-  it('employee requests leave, manager approves', async () => {
-    // 1. Employee logs in
-    const employee = await login('employee@company.com');
-
-    // 2. Employee creates leave request
-    const request = await employee.api.leave.create({
-      type: 'vacation',
-      startDate: '2025-02-01',
-      endDate: '2025-02-05'
-    });
-
-    expect(request.status).toBe('pending');
-
-    // 3. Manager logs in
-    const manager = await login('manager@company.com');
-
-    // 4. Manager sees pending request
-    const pendingRequests = await manager.api.leave.listPending();
-    expect(pendingRequests).toContainEqual(
-      expect.objectContaining({ id: request.id })
-    );
-
-    // 5. Manager approves
-    const approved = await manager.api.leave.approve(request.id);
-    expect(approved.status).toBe('approved');
-
-    // 6. Employee sees approval
-    const updated = await employee.api.leave.get(request.id);
-    expect(updated.status).toBe('approved');
-  });
-});
+    public void Dispose()
+    {
+        _context.Dispose();
+    }
+}
 ```
 
 ---
 
 ## Test Utilities
 
-### Mock Factory
+### Mock Helpers
 
-```typescript
-// test-utils.ts
-export const mockGraph = {
-  getNode: jest.fn(),
-  createNode: jest.fn(),
-  traverse: jest.fn(),
-  query: jest.fn()
-};
+```csharp
+// tests/OrgSphere.Tests/TestHelpers/MockHelpers.cs
+using Moq;
+using OrgSphere.Domain.Events;
+using OrgSphere.Domain.Interfaces;
 
-export const mockEvents = {
-  publish: jest.fn(),
-  subscribe: jest.fn()
-};
+namespace OrgSphere.Tests.TestHelpers;
 
-export const mockRepository = {
-  create: jest.fn(),
-  findById: jest.fn(),
-  update: jest.fn(),
-  delete: jest.fn(),
-  list: jest.fn()
-};
-```
+public static class MockHelpers
+{
+    public static Mock<IEventBus> CreateMockEventBus()
+    {
+        var mock = new Mock<IEventBus>();
+        mock.Setup(e => e.PublishAsync(
+                It.IsAny<IDomainEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        return mock;
+    }
 
-### Test Database
-
-```typescript
-// test-db.ts
-export async function createTestDatabase(): Promise<Database> {
-  const db = await Database.connect({
-    host: 'localhost',
-    database: 'orgsphere_test',
-    // Use test schema
-    schema: 'test'
-  });
-
-  return db;
+    public static Mock<ITenantContext> CreateMockTenantContext(Guid? tenantId = null)
+    {
+        var mock = new Mock<ITenantContext>();
+        mock.Setup(t => t.TenantId).Returns(new TenantId(tenantId ?? Guid.NewGuid()));
+        return mock;
+    }
 }
 ```
 
-### Auth Helper
+### Test Auth Helper
 
-```typescript
-// auth-helper.ts
-export async function getAuthToken(
-  user: TestUser
-): Promise<string> {
-  const response = await request(app)
-    .post('/api/auth/login')
-    .send({
-      email: user.email,
-      password: user.password
-    });
+```csharp
+// tests/OrgSphere.Tests/TestHelpers/TestAuthHelper.cs
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
-  return response.body.token;
+namespace OrgSphere.Tests.TestHelpers;
+
+public static class TestAuthHelper
+{
+    public static string GetToken(string role = "admin", Guid? tenantId = null)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("test-secret-key-for-testing-only"));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+            new Claim("tenantId", (tenantId ?? Guid.NewGuid()).ToString()),
+            new Claim(ClaimTypes.Role, role)
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: "test",
+            audience: "test",
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 }
 ```
 
@@ -410,25 +457,25 @@ export async function getAuthToken(
 
 ```bash
 # Run all tests
-npm test
+dotnet test
 
 # Run unit tests only
-npm run test:unit
+dotnet test --filter "Category=Unit"
 
 # Run integration tests only
-npm run test:integration
+dotnet test --filter "Category=Integration"
 
-# Run E2E tests only
-npm run test:e2e
+# Run specific test class
+dotnet test --filter "FullyQualifiedName~LeaveServiceTests"
 
-# Run tests with coverage
-npm run test:coverage
+# Run specific test method
+dotnet test --filter "FullyQualifiedName~LeaveServiceTests.CreateRequest_ShouldCreateLeaveRequest"
 
-# Run specific test file
-npm test -- leave.service.test.ts
+# Run with coverage
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
 
-# Run tests in watch mode
-npm run test:watch
+# Run in watch mode
+dotnet watch test
 ```
 
 ### CI/CD Integration
@@ -441,15 +488,22 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      neo4j:
+        image: neo4j:5
+        ports:
+          - 7687:7687
+        env:
+          NEO4J_AUTH: neo4j/testpassword
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          node-version: '20'
-      - run: npm ci
-      - run: npm run test:coverage
-      - run: npm run lint
-      - run: npm run typecheck
+          dotnet-version: '10.0.x'
+      - run: dotnet restore
+      - run: dotnet build --no-restore
+      - run: dotnet test --no-build --collectCoverage=true
+      - run: dotnet format --verify-no-changes
 ```
 
 ---
@@ -458,9 +512,10 @@ jobs:
 
 Before merging:
 
-- [ ] All tests pass
-- [ ] Coverage meets target
+- [ ] All tests pass (`dotnet test`)
+- [ ] Coverage meets target (80%+ for unit tests)
 - [ ] No test isolation issues
-- [ ] Mocks are cleaned up
+- [ ] Mocks are cleaned up (verify no state leakage)
 - [ ] Test data is properly managed
+- [ ] Integration tests use WebApplicationFactory
 - [ ] Tests are readable and maintainable

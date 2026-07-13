@@ -185,10 +185,10 @@ If it doesn't integrate with the graph, reconsider the design.
 
 ### 4. Code Conventions
 
-- TypeScript for backend
+- C# / .NET 10 for backend
 - React for frontend
-- GraphQL for complex queries
-- REST for simple CRUD
+- REST for all CRUD operations
+- SignalR for real-time graph updates
 - Events for inter-service communication
 
 ### 5. Multi-Tenant Always
@@ -242,34 +242,30 @@ If it doesn't integrate with the graph, reconsider the design.
 
 ### Creating Entities
 
-```typescript
-await graphService.createNode({
-  type: 'Employee',
-  tenantId: context.tenantId,
-  properties: { name, email, department }
-});
+```csharp
+await graphService.CreateNodeAsync(
+    NodeType.Employee,
+    new Dictionary<string, object>
+    {
+        ["Name"] = name,
+        ["Email"] = email,
+        ["Department"] = department
+    });
 ```
 
 ### Creating Relationships
 
-```typescript
-await graphService.createEdge({
-  type: 'REPORTS_TO',
-  sourceId: employeeId,
-  targetId: managerId,
-  tenantId: context.tenantId
-});
+```csharp
+await graphService.CreateEdgeAsync(
+    EdgeType.REPORTS_TO,
+    sourceId: employeeId,
+    targetId: managerId);
 ```
 
 ### Querying
 
-```typescript
-const reports = await graphService.traverse({
-  start: managerId,
-  relationship: 'REPORTS_TO',
-  direction: 'INCOMING',
-  tenantId: context.tenantId
-});
+```csharp
+var reports = await graphService.GetDirectReportsAsync(managerId);
 ```
 
 ---

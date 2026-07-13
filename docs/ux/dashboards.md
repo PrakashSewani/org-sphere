@@ -147,7 +147,7 @@ Role-based dashboards that provide relevant information at a glance.
 
 ### Live Data
 
-- WebSocket connections
+- SignalR connections
 - Automatic refresh
 - Push notifications
 - Status indicators

@@ -214,7 +214,7 @@ Power user keyboard navigation.
 
 ### Real-Time Updates
 
-- WebSocket for live updates
+- SignalR for live updates
 - Optimistic updates for responsiveness
 - Conflict resolution for concurrent edits
 - Batch updates for bulk operations

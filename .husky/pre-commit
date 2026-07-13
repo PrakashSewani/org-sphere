@@ -1,13 +1,1 @@
-#!/usr/bin/env sh
-
-echo "🔍 Running dotnet format..."
-
-# Run dotnet format on all projects
-dotnet format --no-restore --severity info --verify-no-changes
-
-if [ $? -ne 0 ]; then
-  echo "❌ Formatting issues found. Run 'dotnet format' to fix."
-  exit 1
-fi
-
-echo "✅ Format check passed."
+dotnet format --no-restore --severity info

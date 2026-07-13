@@ -46,7 +46,6 @@ Brainstorm and capture ideas for future development.
 
 ### Architecture
 
-- [ ] GraphQL federation
 - [ ] Edge computing
 - [ ] Serverless functions
 - [ ] WebAssembly modules

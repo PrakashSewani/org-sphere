@@ -142,14 +142,13 @@ All tenants share tables with tenant_id column.
 
 Every request carries tenant context:
 
-```typescript
-interface TenantContext {
-  tenantId: string;
-  userId: string;
-  roles: string[];
-  permissions: string[];
-  timezone: string;
-  locale: string;
+```csharp
+// OrgSphere.Domain/TenantContext.cs
+public class TenantContext : ITenantContext
+{
+    public TenantId? TenantId { get; set; }
+    public UserId? UserId { get; set; }
+    public UserRole? Role { get; set; }
 }
 ```
 

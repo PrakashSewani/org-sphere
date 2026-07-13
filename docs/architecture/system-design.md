@@ -211,18 +211,12 @@ Service A → Event Bus → Service B (subscribes to event)
 
 ## Real-Time Architecture
 
-### WebSocket Connections
+### SignalR (Real-Time)
 
-- Live graph updates
+- Live graph updates via `/hubs/graph`
 - Approval status changes
 - Notification delivery
 - Presence indicators
-
-### Server-Sent Events
-
-- Dashboard updates
-- Analytics streaming
-- Status changes
 
 ---
 

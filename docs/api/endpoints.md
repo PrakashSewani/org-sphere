@@ -2,7 +2,7 @@
 
 ## API Design
 
-RESTful API with GraphQL support for flexible queries.
+RESTful API with SignalR for real-time graph updates.
 
 ---
 

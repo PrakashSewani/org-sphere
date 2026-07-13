@@ -200,6 +200,5 @@ All permission checks are logged:
 Authorization middleware applies to:
 
 - All API endpoints
-- GraphQL resolvers
-- WebSocket connections
+- SignalR hub connections
 - Background jobs

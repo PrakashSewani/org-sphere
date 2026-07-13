@@ -13,349 +13,348 @@ Load this skill when creating new modules or modifying existing modules in OrgSp
 
 ---
 
+## Tech Stack
+
+- **Backend**: C# / .NET 10, Clean Architecture
+- **Database**: Neo4j (graph), Redis (cache)
+- **API**: REST controllers with ASP.NET Core
+- **Real-time**: SignalR for graph updates
+- **CQRS**: DispatchR.Mediator
+- **Validation**: FluentValidation
+- **Events**: InMemoryEventBus (domain events)
+
+---
+
 ## Module Structure
 
-### Directory Layout
+### Clean Architecture Layout
+
+Each module spans multiple projects following Clean Architecture:
 
 ```
-src/modules/
-├── leave/
-│   ├── index.ts              # Module entry point
-│   ├── types.ts              # TypeScript types
-│   ├── service.ts            # Business logic
-│   ├── resolver.ts           # GraphQL resolvers
-│   ├── controller.ts         # REST controllers
-│   ├── events.ts             # Event handlers
-│   ├── validation.ts         # Input validation
-│   ├── permissions.ts        # Permission definitions
-│   └── tests/
-│       ├── service.test.ts
-│       ├── resolver.test.ts
-│       └── integration.test.ts
+src/backend/
+├── OrgSphere.Domain/              # Entities, interfaces, enums (no dependencies)
+│   ├── Entities/
+│   │   └── LeaveRequest.cs
+│   ├── Enums/
+│   │   └── LeaveType.cs
+│   └── Interfaces/
+│       └── ILeaveRepository.cs
+│
+├── OrgSphere.Application/         # CQRS handlers, validators, DTOs
+│   ├── Commands/
+│   │   └── CreateLeaveRequestCommand.cs
+│   ├── Queries/
+│   │   └── GetLeaveRequestsQuery.cs
+│   ├── Services/
+│   │   └── LeaveService.cs
+│   ├── DTOs/
+│   │   └── LeaveDtos.cs
+│   └── Validators/
+│       └── CreateLeaveRequestValidator.cs
+│
+├── OrgSphere.Infrastructure/      # Neo4j repositories, external services
+│   └── Repositories/
+│       └── LeaveRepository.cs
+│
+└── OrgSphere.API/                 # Controllers, middleware
+    └── Controllers/
+        └── LeaveController.cs
 ```
 
 ---
 
 ## Creating a New Module
 
-### Step 1: Define Types
+### Step 1: Define Domain Entities
 
-```typescript
-// types.ts
-export interface LeaveRequest {
-  id: string;
-  tenantId: string;
-  employeeId: string;
-  type: LeaveType;
-  startDate: Date;
-  endDate: Date;
-  status: LeaveStatus;
-  reason?: string;
-  approvedBy?: string;
-  createdAt: Date;
-  updatedAt: Date;
+```csharp
+// OrgSphere.Domain/Enums/LeaveType.cs
+namespace OrgSphere.Domain.Enums;
+
+public enum LeaveType
+{
+    Vacation,
+    Sick,
+    Personal,
+    Parental
 }
 
-export enum LeaveType {
-  VACATION = 'vacation',
-  SICK = 'sick',
-  PERSONAL = 'personal',
-  PARENTAL = 'parental'
-}
-
-export enum LeaveStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  CANCELLED = 'cancelled'
+public enum LeaveStatus
+{
+    Pending,
+    Approved,
+    Rejected,
+    Cancelled
 }
 ```
 
-### Step 2: Create Service
+```csharp
+// OrgSphere.Domain/Entities/LeaveRequest.cs
+using OrgSphere.Domain.Enums;
+using OrgSphere.Domain.ValueObjects;
 
-```typescript
-// service.ts
-import { GraphService } from '../graph/service';
-import { EventBus } from '../events/bus';
+namespace OrgSphere.Domain.Entities;
 
-export class LeaveService {
-  constructor(
-    private graph: GraphService,
-    private events: EventBus
-  ) {}
-
-  async createRequest(
-    input: CreateLeaveRequestInput,
-    tenantId: string
-  ): Promise<LeaveRequest> {
-    // 1. Validate tenant context
-    validateTenantContext(tenantId);
-
-    // 2. Validate employee exists and belongs to tenant
-    const employee = await this.graph.getNode(
-      input.employeeId,
-      tenantId
-    );
-    if (!employee) {
-      throw new Error('Employee not found');
-    }
-
-    // 3. Validate leave policy
-    await this.validatePolicy(input, tenantId);
-
-    // 4. Create request
-    const request = await this.repository.create({
-      ...input,
-      tenantId,
-      status: LeaveStatus.PENDING,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-
-    // 5. Publish event
-    await this.events.publish({
-      type: 'leave.requested',
-      tenantId,
-      data: { requestId: request.id, employeeId: input.employeeId }
-    });
-
-    // 6. Route to approver
-    await this.routeToApprover(request, tenantId);
-
-    return request;
-  }
-
-  async approveRequest(
-    requestId: string,
-    approvedBy: string,
-    tenantId: string
-  ): Promise<LeaveRequest> {
-    // 1. Validate request exists
-    const request = await this.repository.findById(requestId, tenantId);
-    if (!request) {
-      throw new Error('Leave request not found');
-    }
-
-    // 2. Validate approver has permission
-    await this.validateApproverPermission(
-      approvedBy,
-      request.employeeId,
-      tenantId
-    );
-
-    // 3. Update request
-    const updated = await this.repository.update(requestId, {
-      status: LeaveStatus.APPROVED,
-      approvedBy,
-      updatedAt: new Date()
-    }, tenantId);
-
-    // 4. Publish event
-    await this.events.publish({
-      type: 'leave.approved',
-      tenantId,
-      data: { requestId, employeeId: request.employeeId }
-    });
-
-    // 5. Update leave balance
-    await this.updateBalance(request, tenantId);
-
-    return updated;
-  }
-
-  private async validatePolicy(
-    input: CreateLeaveRequestInput,
-    tenantId: string
-  ): Promise<void> {
-    const policy = await this.getPolicy(input.type, tenantId);
-    const balance = await this.getBalance(
-      input.employeeId,
-      input.type,
-      tenantId
-    );
-
-    const daysRequested = this.calculateDays(
-      input.startDate,
-      input.endDate
-    );
-
-    if (daysRequested > balance.available) {
-      throw new Error('Insufficient leave balance');
-    }
-  }
-
-  private async routeToApprover(
-    request: LeaveRequest,
-    tenantId: string
-  ): Promise<void> {
-    // Find direct manager via graph
-    const manager = await this.graph.traverse({
-      start: request.employeeId,
-      relationship: 'REPORTS_TO',
-      direction: 'OUTGOING',
-      depth: 1,
-      tenantId
-    });
-
-    if (manager.length === 0) {
-      throw new Error('No approver found');
-    }
-
-    // Create approval record
-    await this.approvalService.create({
-      type: 'leave',
-      requestId: request.id,
-      approverId: manager[0].id,
-      tenantId
-    });
-  }
+public class LeaveRequest
+{
+    public Guid Id { get; set; }
+    public TenantId TenantId { get; set; }
+    public Guid EmployeeId { get; set; }
+    public LeaveType Type { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public LeaveStatus Status { get; set; }
+    public string? Reason { get; set; }
+    public Guid? ApprovedBy { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }
 ```
 
-### Step 3: Create Resolvers
+### Step 2: Define Repository Interface
 
-```typescript
-// resolver.ts
-export const leaveResolvers = {
-  Query: {
-    leaveRequests: async (_, args, context) => {
-      return leaveService.listRequests(
-        context.tenantId,
-        args.filters
-      );
-    },
+```csharp
+// OrgSphere.Domain/Interfaces/ILeaveRepository.cs
+using OrgSphere.Domain.Entities;
 
-    leaveRequest: async (_, { id }, context) => {
-      return leaveService.getRequest(id, context.tenantId);
-    },
+namespace OrgSphere.Domain.Interfaces;
 
-    leaveBalance: async (_, { employeeId, type }, context) => {
-      return leaveService.getBalance(
-        employeeId,
-        type,
-        context.tenantId
-      );
-    }
-  },
-
-  Mutation: {
-    createLeaveRequest: async (_, { input }, context) => {
-      return leaveService.createRequest(input, context.tenantId);
-    },
-
-    approveLeaveRequest: async (_, { id }, context) => {
-      return leaveService.approveRequest(
-        id,
-        context.userId,
-        context.tenantId
-      );
-    },
-
-    rejectLeaveRequest: async (_, { id, reason }, context) => {
-      return leaveService.rejectRequest(
-        id,
-        context.userId,
-        reason,
-        context.tenantId
-      );
-    }
-  },
-
-  Employee: {
-    leaveRequests: async (employee, _, context) => {
-      return leaveService.getEmployeeRequests(
-        employee.id,
-        context.tenantId
-      );
-    },
-
-    leaveBalance: async (employee, _, context) => {
-      return leaveService.getEmployeeBalances(
-        employee.id,
-        context.tenantId
-      );
-    }
-  }
-};
+public interface ILeaveRepository
+{
+    Task<LeaveRequest> CreateAsync(LeaveRequest request, CancellationToken ct = default);
+    Task<LeaveRequest?> GetByIdAsync(Guid id, TenantId tenantId, CancellationToken ct = default);
+    Task<IReadOnlyList<LeaveRequest>> GetAllAsync(TenantId tenantId, CancellationToken ct = default);
+    Task<LeaveRequest> UpdateAsync(LeaveRequest request, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, TenantId tenantId, CancellationToken ct = default);
+}
 ```
 
-### Step 4: Define Permissions
+### Step 3: Create DTOs
 
-```typescript
-// permissions.ts
-export const leavePermissions = {
-  'leave:request:create': {
-    description: 'Create leave request',
-    scope: 'own'
-  },
+```csharp
+// OrgSphere.Application/DTOs/LeaveDtos.cs
+using OrgSphere.Domain.Enums;
 
-  'leave:request:read': {
-    description: 'Read leave requests',
-    scope: 'team'  // Managers can see team requests
-  },
+namespace OrgSphere.Application.DTOs;
 
-  'leave:request:approve': {
-    description: 'Approve leave requests',
-    scope: 'team',
-    requiresGraphRelationship: 'REPORTS_TO'
-  },
+public record LeaveRequestDto
+{
+    public Guid Id { get; init; }
+    public Guid EmployeeId { get; init; }
+    public LeaveType Type { get; init; }
+    public DateTime StartDate { get; init; }
+    public DateTime EndDate { get; init; }
+    public LeaveStatus Status { get; init; }
+    public string? Reason { get; init; }
+    public DateTime CreatedAt { get; init; }
+}
 
-  'leave:policy:manage': {
-    description: 'Manage leave policies',
-    scope: 'company',
-    requiresRole: 'hr_admin'
-  }
-};
+public record CreateLeaveRequestCommand(
+    Guid EmployeeId,
+    LeaveType Type,
+    DateTime StartDate,
+    DateTime EndDate,
+    string? Reason);
 ```
 
-### Step 5: Create Events
+### Step 4: Create Service with CQRS
 
-```typescript
-// events.ts
-export const leaveEvents = {
-  'leave.requested': {
-    handler: async (event) => {
-      // Notify manager
-      await notificationService.notify({
-        type: 'approval_required',
-        userId: event.data.managerId,
-        message: `New leave request from ${event.data.employeeName}`,
-        tenantId: event.tenantId
-      });
+```csharp
+// OrgSphere.Application/Services/LeaveService.cs
+using OrgSphere.Application.DTOs;
+using OrgSphere.Domain.Entities;
+using OrgSphere.Domain.Enums;
+using OrgSphere.Domain.Events;
+using OrgSphere.Domain.Interfaces;
+
+namespace OrgSphere.Application.Services;
+
+public class LeaveService(
+    ILeaveRepository repository,
+    IGraphService graphService,
+    IEventBus eventBus,
+    ITenantContext tenantContext)
+{
+    public async Task<LeaveRequestDto> CreateRequestAsync(
+        CreateLeaveRequestCommand command,
+        CancellationToken ct = default)
+    {
+        var tenantId = tenantContext.TenantId!;
+
+        // 1. Validate employee exists in graph
+        var employee = await graphService.GetNodeAsync(command.EmployeeId, tenantId, ct)
+            ?? throw new KeyNotFoundException("Employee not found");
+
+        // 2. Validate leave balance
+        await ValidateBalanceAsync(command, tenantId, ct);
+
+        // 3. Create entity
+        var entity = new LeaveRequest
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            EmployeeId = command.EmployeeId,
+            Type = command.Type,
+            StartDate = command.StartDate,
+            EndDate = command.EndDate,
+            Status = LeaveStatus.Pending,
+            Reason = command.Reason,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var created = await repository.CreateAsync(entity, ct);
+
+        // 4. Publish domain event
+        await eventBus.PublishAsync(
+            new LeaveRequestedEvent(tenantId, created.Id, command.EmployeeId), ct);
+
+        return MapToDto(created);
     }
-  },
 
-  'leave.approved': {
-    handler: async (event) => {
-      // Notify employee
-      await notificationService.notify({
-        type: 'request_approved',
-        userId: event.data.employeeId,
-        message: 'Your leave request has been approved',
-        tenantId: event.tenantId
-      });
+    public async Task<LeaveRequestDto> ApproveRequestAsync(
+        Guid requestId,
+        Guid approvedBy,
+        CancellationToken ct = default)
+    {
+        var tenantId = tenantContext.TenantId!;
+        var entity = await repository.GetByIdAsync(requestId, tenantId, ct)
+            ?? throw new KeyNotFoundException("Leave request not found");
 
-      // Update team availability
-      await analyticsService.trackEvent(
-        'leave_approved',
-        event.data,
-        event.tenantId
-      );
+        entity.Status = LeaveStatus.Approved;
+        entity.ApprovedBy = approvedBy;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        var updated = await repository.UpdateAsync(entity, ct);
+
+        await eventBus.PublishAsync(
+            new LeaveApprovedEvent(tenantId, requestId, entity.EmployeeId), ct);
+
+        return MapToDto(updated);
     }
-  },
 
-  'leave.rejected': {
-    handler: async (event) => {
-      // Notify employee
-      await notificationService.notify({
-        type: 'request_rejected',
-        userId: event.data.employeeId,
-        message: `Your leave request was rejected: ${event.data.reason}`,
-        tenantId: event.tenantId
-      });
+    private async Task ValidateBalanceAsync(
+        CreateLeaveRequestCommand command,
+        Domain.ValueObjects.TenantId tenantId,
+        CancellationToken ct)
+    {
+        var days = (command.EndDate - command.StartDate).Days + 1;
+        // Check balance via repository or graph query
+        // Throw if insufficient
     }
-  }
-};
+
+    private static LeaveRequestDto MapToDto(LeaveRequest entity) => new()
+    {
+        Id = entity.Id,
+        EmployeeId = entity.EmployeeId,
+        Type = entity.Type,
+        StartDate = entity.StartDate,
+        EndDate = entity.EndDate,
+        Status = entity.Status,
+        Reason = entity.Reason,
+        CreatedAt = entity.CreatedAt
+    };
+}
+```
+
+### Step 5: Create REST Controller
+
+```csharp
+// OrgSphere.API/Controllers/LeaveController.cs
+using Microsoft.AspNetCore.Mvc;
+using OrgSphere.Application.DTOs;
+using OrgSphere.Application.Services;
+
+namespace OrgSphere.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class LeaveController(ILeaveService leaveService) : ControllerBase
+{
+    [HttpPost("requests")]
+    public async Task<ActionResult<LeaveRequestDto>> CreateRequest(
+        [FromBody] CreateLeaveRequestCommand command)
+    {
+        var result = await leaveService.CreateRequestAsync(command);
+        return CreatedAtAction(nameof(GetRequest), new { id = result.Id }, result);
+    }
+
+    [HttpGet("requests")]
+    public async Task<ActionResult<IReadOnlyList<LeaveRequestDto>>> GetRequests()
+    {
+        return Ok(await leaveService.GetRequestsAsync());
+    }
+
+    [HttpGet("requests/{id:guid}")]
+    public async Task<ActionResult<LeaveRequestDto>> GetRequest(Guid id)
+    {
+        var result = await leaveService.GetRequestAsync(id);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPut("requests/{id:guid}/approve")]
+    public async Task<ActionResult<LeaveRequestDto>> ApproveRequest(Guid id)
+    {
+        return Ok(await leaveService.ApproveRequestAsync(id, GetCurrentUserId()));
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        // Extract from JWT claims
+        return Guid.Parse(User.FindFirst("sub")?.Value ?? Guid.Empty.ToString());
+    }
+}
+```
+
+### Step 6: Define Permissions
+
+```csharp
+// OrgSphere.Domain/Permissions/LeavePermissions.cs
+using OrgSphere.Domain.Permissions;
+
+namespace OrgSphere.Domain.Permissions;
+
+public static class LeavePermissions
+{
+    public static readonly Permission CreateRequest = new(
+        "leave:request:create", "Create leave request", PermissionScope.Own);
+
+    public static readonly Permission ReadRequests = new(
+        "leave:request:read", "Read leave requests", PermissionScope.Team);
+
+    public static readonly Permission ApproveRequests = new(
+        "leave:request:approve", "Approve leave requests", PermissionScope.Team);
+
+    public static readonly Permission ManagePolicies = new(
+        "leave:policy:manage", "Manage leave policies", PermissionScope.Company);
+}
+```
+
+### Step 7: Create FluentValidation Validator
+
+```csharp
+// OrgSphere.Application/Validators/CreateLeaveRequestValidator.cs
+using FluentValidation;
+
+namespace OrgSphere.Application.Validators;
+
+public class CreateLeaveRequestValidator : AbstractValidator<Commands.CreateLeaveRequestCommand>
+{
+    public CreateLeaveRequestValidator()
+    {
+        RuleFor(x => x.EmployeeId)
+            .NotEmpty();
+
+        RuleFor(x => x.StartDate)
+            .LessThanOrEqualTo(x => x.EndDate)
+            .WithMessage("Start date must be before end date");
+
+        RuleFor(x => x.EndDate)
+            .GreaterThanOrEqualTo(DateTime.UtcNow.Date)
+            .WithMessage("End date cannot be in the past");
+    }
+}
 ```
 
 ---
@@ -364,15 +363,17 @@ export const leaveEvents = {
 
 When creating or modifying a module, ensure:
 
-- [ ] Types are properly defined
-- [ ] Service handles all business logic
-- [ ] Resolvers follow GraphQL conventions
-- [ ] Permissions are defined for all operations
-- [ ] Events are published for state changes
-- [ ] Validation is comprehensive
-- [ ] Multi-tenant isolation is enforced
-- [ ] Tests are written
-- [ ] Documentation is updated
+- [ ] Domain entities defined in `OrgSphere.Domain`
+- [ ] Repository interface in `OrgSphere.Domain/Interfaces`
+- [ ] DTOs defined in `OrgSphere.Application/DTOs`
+- [ ] Service implements business logic with CQRS pattern
+- [ ] FluentValidation validators created
+- [ ] REST controller with proper HTTP verbs
+- [ ] Permissions defined with `RequirePermission` attribute
+- [ ] Domain events published for state changes
+- [ ] Multi-tenant isolation enforced via `ITenantContext`
+- [ ] Tests written
+- [ ] Documentation updated
 
 ---
 
@@ -380,36 +381,29 @@ When creating or modifying a module, ensure:
 
 ### Repository Pattern
 
-```typescript
-export class LeaveRepository {
-  async create(data, tenantId) { /* ... */ }
-  async findById(id, tenantId) { /* ... */ }
-  async update(id, data, tenantId) { /* ... */ }
-  async delete(id, tenantId) { /* ... */ }
-  async list(filters, tenantId) { /* ... */ }
-}
-```
-
-### Service Pattern
-
-```typescript
-export class LeaveService {
-  constructor(
-    private repository: LeaveRepository,
-    private graph: GraphService,
-    private events: EventBus,
-    private notifications: NotificationService
-  ) {}
+```csharp
+public interface IGraphRepository
+{
+    Task<T?> GetByIdAsync(Guid id, TenantId tenantId, CancellationToken ct = default);
+    Task<IReadOnlyList<T>> GetAllAsync(TenantId tenantId, CancellationToken ct = default);
+    Task<T> CreateAsync(T entity, CancellationToken ct = default);
+    Task<T> UpdateAsync(T entity, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, TenantId tenantId, CancellationToken ct = default);
 }
 ```
 
 ### Event Pattern
 
-```typescript
+```csharp
 // Always publish events after successful operations
-await this.events.publish({
-  type: 'entity.action',
-  tenantId,
-  data: { /* relevant data */ }
-});
+await _eventBus.PublishAsync(
+    new EntityCreatedEvent(_tenantContext.TenantId!, entity.Id), ct);
+```
+
+### MediatR Pipeline (CQRS)
+
+```csharp
+// Command handler registration in Program.cs
+builder.Services.AddScoped<IRequestHandler<CreateLeaveRequestCommand, LeaveRequestDto>,
+    CreateLeaveRequestHandler>();
 ```

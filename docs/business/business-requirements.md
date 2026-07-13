@@ -213,7 +213,7 @@ OrgSphere is a graph-native Organization Operating Platform (OrgOS) designed to 
 ### API Requirements
 
 - RESTful API
-- GraphQL API
+- SignalR for real-time updates
 - Webhook support
 - SDK availability
 

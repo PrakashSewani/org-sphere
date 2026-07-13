@@ -87,16 +87,13 @@ Event-driven architecture for decoupled communication between services.
 
 ### Publishing Pattern
 
-```typescript
-await eventBus.publish({
-  type: 'employee.created',
-  tenantId: context.tenantId,
-  data: {
-    employeeId: employee.id,
-    name: employee.name,
-    department: employee.department
-  }
-});
+```csharp
+await _eventBus.PublishAsync(
+    new EmployeeCreatedEvent(
+        TenantId: _tenantContext.TenantId!,
+        EmployeeId: employee.Id,
+        Name: employee.Name),
+    cancellationToken);
 ```
 
 ### Guaranteed Delivery
@@ -112,12 +109,16 @@ await eventBus.publish({
 
 ### Consumer Pattern
 
-```typescript
-eventBus.subscribe('employee.created', async (event) => {
-  // Process event
-  await updateSearchIndex(event.data);
-  await sendWelcomeNotification(event.data);
-  await updateAnalytics(event.data);
+```csharp
+// Register handler in DI
+_eventBus.Subscribe(async (IDomainEvent domainEvent, CancellationToken ct) =>
+{
+    if (domainEvent is EmployeeCreatedEvent e)
+    {
+        await updateSearchIndexAsync(e, ct);
+        await sendWelcomeNotificationAsync(e, ct);
+        await updateAnalyticsAsync(e, ct);
+    }
 });
 ```
 

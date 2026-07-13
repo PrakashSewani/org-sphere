@@ -72,22 +72,26 @@ X-Tenant-ID: tenant-456
 
 ### Signing
 
-```typescript
-const signature = crypto
-  .createHmac('sha256', secret)
-  .update(JSON.stringify(payload))
-  .digest('hex');
+```csharp
+using System.Security.Cryptography;
+using System.Text;
+
+var payload = JsonSerializer.Serialize(data);
+var keyBytes = Encoding.UTF8.GetBytes(secret);
+using var hmac = new HMACSHA256(keyBytes);
+var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
+var signature = Convert.ToHexString(hash).ToLowerInvariant();
 ```
 
 ### Verification
 
-```typescript
-const expectedSignature = crypto
-  .createHmac('sha256', secret)
-  .update(JSON.stringify(payload))
-  .digest('hex');
-
-const isValid = signature === expectedSignature;
+```csharp
+using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+var computed = Convert.ToHexString(
+    hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+var isValid = CryptographicOperations.FixedTimeEquals(
+    Encoding.UTF8.GetBytes(computed),
+    Encoding.UTF8.GetBytes(receivedSignature));
 ```
 
 ---
