@@ -5,6 +5,7 @@ using OrgSphere.Domain.Interfaces;
 using OrgSphere.Infrastructure.Migrations;
 using OrgSphere.Infrastructure.Migrations.Migrations;
 using OrgSphere.Infrastructure.Persistence;
+using OrgSphere.Infrastructure.Repositories;
 using OrgSphere.Infrastructure.Seed;
 using OrgSphere.Infrastructure.Seed.Seeds;
 
@@ -23,6 +24,8 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddScoped<INeo4jContext, Neo4jContext>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+        services.AddScoped<IEmployeeDocumentRepository, EmployeeDocumentRepository>();
 
         services.AddSingleton<IMigration, CreateConstraints>();
         services.AddSingleton<IMigration, CreateIndexes>();

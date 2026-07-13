@@ -4,14 +4,16 @@ using OrgSphere.Domain.Events;
 
 namespace OrgSphere.API.Hubs;
 
-public class GraphEventRelay(IEventBus eventBus, IHubContext<GraphHub> hubContext) : IHostedService
+public class GraphEventRelay(IServiceScopeFactory scopeFactory, IHubContext<GraphHub> hubContext) : IHostedService
 {
-    private readonly IEventBus _eventBus = eventBus;
+    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
     private readonly IHubContext<GraphHub> _hubContext = hubContext;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _eventBus.Subscribe(HandleEventAsync);
+        using var scope = _scopeFactory.CreateScope();
+        var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
+        eventBus.Subscribe(HandleEventAsync);
         return Task.CompletedTask;
     }
 

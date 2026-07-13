@@ -66,6 +66,7 @@ builder.Services.AddScoped<IRefreshTokenStore, RedisRefreshTokenStore>();
 builder.Services.AddScoped<OrgSphere.Application.Services.IAuthService, AuthService>();
 builder.Services.AddScoped<IGraphService, GraphService>();
 builder.Services.AddScoped<IOrganizationGraphService, OrganizationGraphService>();
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IAuthorizationService, OrgSphere.Application.Services.AuthorizationService>();
 
 builder.Services.AddSignalR();

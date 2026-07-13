@@ -51,5 +51,6 @@ public interface IUnitOfWork : IDisposable
     IUserRepository Users { get; }
     IGraphNodeRepository GraphNodes { get; }
     IGraphEdgeRepository GraphEdges { get; }
+    IEmployeeRepository Employees { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

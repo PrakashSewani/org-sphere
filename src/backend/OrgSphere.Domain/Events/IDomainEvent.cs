@@ -66,3 +66,24 @@ public record TenantCreatedEvent(TenantId TenantId, string Name) : IDomainEvent
     public string EventType => "Tenant.Created";
     public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
 }
+
+public record EmployeeCreatedEvent(TenantId TenantId, Guid EmployeeId, string Email) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Employee.Created";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record EmployeeUpdatedEvent(TenantId TenantId, Guid EmployeeId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Employee.Updated";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record EmployeeDeletedEvent(TenantId TenantId, Guid EmployeeId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Employee.Deleted";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
