@@ -31,11 +31,12 @@ public class EmployeeRepository(INeo4jContext context) : IEmployeeRepository
             @"MATCH (n:GraphNode {TenantId: $tenantId, Type: 'Employee'})
               WHERE n.Properties CONTAINS $email
               RETURN n",
-            new { tenantId = tenantId.Value.ToString(), email = email });
+            new { tenantId = tenantId.Value.ToString(), email });
 
         var records = await result.ToListAsync(cancellationToken);
         var record = records.FirstOrDefault();
-        if (record is null) return null;
+        if (record is null)
+            return null;
 
         var employee = MapToEntity(record);
         return employee.Email.Equals(email, StringComparison.OrdinalIgnoreCase) ? employee : null;

@@ -181,7 +181,8 @@ public class EmployeeService(
         CancellationToken ct = default)
     {
         var tenantId = _tenantContext.TenantId!;
-        var employee = await _repository.GetByIdAsync(employeeId, tenantId, ct)
+
+        _ = await _repository.GetByIdAsync(employeeId, tenantId, ct)
             ?? throw new KeyNotFoundException($"Employee {employeeId} not found");
 
         var storagePath = Path.Combine("uploads", tenantId.Value.ToString(), employeeId.ToString(), $"{Guid.NewGuid()}_{fileName}");
