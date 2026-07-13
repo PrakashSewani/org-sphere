@@ -64,3 +64,17 @@ public enum ApprovalStatus
     Escalated,
     Delegated
 }
+
+public enum EmploymentType
+{
+    FullTime,
+    PartTime,
+    Contractor
+}
+
+public enum EmployeeStatus
+{
+    Active,
+    Inactive,
+    OnLeave
+}

@@ -11,11 +11,13 @@ public class UnitOfWork(INeo4jContext context) : IUnitOfWork
     private IUserRepository? _users;
     private IGraphNodeRepository? _graphNodes;
     private IGraphEdgeRepository? _graphEdges;
+    private IEmployeeRepository? _employees;
 
     public ITenantRepository Tenants => _tenants ??= new TenantRepository(_context);
     public IUserRepository Users => _users ??= new UserRepository(_context);
     public IGraphNodeRepository GraphNodes => _graphNodes ??= new GraphNodeRepository(_context);
     public IGraphEdgeRepository GraphEdges => _graphEdges ??= new GraphEdgeRepository(_context);
+    public IEmployeeRepository Employees => _employees ??= new EmployeeRepository(_context);
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

@@ -64,10 +64,10 @@
 
 ### Employee Management
 
-- [ ] **TODO-022**: Build Employee module (types, service, repository)
-- [ ] **TODO-023**: Build Employee API (REST endpoints)
-- [ ] **TODO-024**: Build Employee self-service (profile update, document upload)
-- [ ] **TODO-025**: Write tests for Employee module
+- [x] **TODO-022**: Build Employee module (types, service, repository)
+- [x] **TODO-023**: Build Employee API (REST endpoints)
+- [x] **TODO-024**: Build Employee self-service (profile update, document upload)
+- [x] **TODO-025**: Write tests for Employee module
 
 ### Leave Management
 
@@ -282,6 +282,12 @@
 - Phase 5 depends on Phase 2
 - Phase 6 can start after Phase 2
 - Phase 7 is last
+
+---
+
+## Docker & Deployment
+
+- [ ] **TODO-090**: Dockerize backend API (add app service back to docker-compose, multi-stage Dockerfile)
 
 ### Session Guidelines
 
