@@ -95,3 +95,23 @@ public enum AttendanceCheckType
     CheckIn,
     CheckOut
 }
+
+public enum ApprovalType
+{
+    LeaveRequest,
+    ExpenseReport,
+    EquipmentRequest,
+    AccessRequest,
+    PromotionRequest,
+    Custom
+}
+
+public enum ApprovalStepStatus
+{
+    Pending,
+    Approved,
+    Rejected,
+    Escalated,
+    Delegated,
+    Skipped
+}

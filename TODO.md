@@ -86,11 +86,11 @@
 
 ### Approval Engine
 
-- [ ] **TODO-035**: Build Approval module (types, service, repository)
-- [ ] **TODO-036**: Build approval chain configuration
-- [ ] **TODO-037**: Build graph-aware approval routing
-- [ ] **TODO-038**: Build delegation and escalation
-- [ ] **TODO-039**: Write tests for Approval module
+- [x] **TODO-035**: Build Approval module (types, service, repository)
+- [x] **TODO-036**: Build approval chain configuration
+- [x] **TODO-037**: Build graph-aware approval routing
+- [x] **TODO-038**: Build delegation and escalation
+- [x] **TODO-039**: Write tests for Approval module
 
 ---
 
@@ -256,13 +256,13 @@
 | Phase | Total | Completed | Status |
 |-------|-------|-----------|--------|
 | Phase 1: Foundation | 17 | 17 | Complete |
-| Phase 2: Core Modules | 22 | 13 | In Progress |
+| Phase 2: Core Modules | 22 | 22 | Complete |
 | Phase 3: Org Designer | 19 | 0 | Not Started |
 | Phase 4: UI & UX | 18 | 0 | Not Started |
 | Phase 5: Features | 13 | 0 | Not Started |
 | Phase 6: Business | 8 | 0 | Not Started |
 | Phase 7: Polish | 17 | 0 | Not Started |
-| **Total** | **114** | **30** | **26%** |
+| **Total** | **114** | **39** | **34%** |
 
 ---
 
@@ -284,10 +284,6 @@
 - Phase 7 is last
 
 ---
-
-## Docker & Deployment
-
-- [ ] **TODO-090**: Dockerize backend API (add app service back to docker-compose, multi-stage Dockerfile)
 
 ### Session Guidelines
 

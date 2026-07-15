@@ -69,6 +69,7 @@ builder.Services.AddScoped<IOrganizationGraphService, OrganizationGraphService>(
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<ILeaveService, LeaveService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<IApprovalService, ApprovalService>();
 builder.Services.AddScoped<IAuthorizationService, OrgSphere.Application.Services.AuthorizationService>();
 
 builder.Services.AddSignalR();
