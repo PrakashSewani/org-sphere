@@ -26,7 +26,7 @@ public class LeaveService(
     {
         var tenantId = _tenantContext.TenantId!;
 
-        var employee = await _employeeRepository.GetByIdAsync(request.EmployeeId, tenantId, ct)
+        _ = await _employeeRepository.GetByIdAsync(request.EmployeeId, tenantId, ct)
             ?? throw new KeyNotFoundException($"Employee {request.EmployeeId} not found");
 
         if (request.EndDate < request.StartDate)

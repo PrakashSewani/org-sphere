@@ -24,7 +24,7 @@ public class AttendanceService(
     {
         var tenantId = _tenantContext.TenantId!;
 
-        var employee = await _employeeRepository.GetByIdAsync(request.EmployeeId, tenantId, ct)
+        _ = await _employeeRepository.GetByIdAsync(request.EmployeeId, tenantId, ct)
             ?? throw new KeyNotFoundException($"Employee {request.EmployeeId} not found");
 
         var today = DateTime.UtcNow.Date;
@@ -70,7 +70,7 @@ public class AttendanceService(
     {
         var tenantId = _tenantContext.TenantId!;
 
-        var employee = await _employeeRepository.GetByIdAsync(request.EmployeeId, tenantId, ct)
+        _ = await _employeeRepository.GetByIdAsync(request.EmployeeId, tenantId, ct)
             ?? throw new KeyNotFoundException($"Employee {request.EmployeeId} not found");
 
         var today = DateTime.UtcNow.Date;
