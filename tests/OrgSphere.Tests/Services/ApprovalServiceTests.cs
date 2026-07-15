@@ -165,7 +165,7 @@ public class ApprovalServiceTests : IDisposable
 
         var manager = CreateTestEmployee();
         _employeeRepository.Setup(r => r.GetByDepartmentAsync(It.IsAny<Guid>(), It.IsAny<TenantId>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Employee> { manager });
+            .ReturnsAsync([manager]);
 
         var request = new CreateApprovalRequestRequest(
             Type: ApprovalType.LeaveRequest,
@@ -631,7 +631,7 @@ public class ApprovalServiceTests : IDisposable
         };
 
         _delegationRepository.Setup(r => r.GetByDelegatorAsync(approver.Id, It.IsAny<TenantId>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ApprovalDelegation> { delegation });
+            .ReturnsAsync([delegation]);
 
         var delegatedSteps = new List<ApprovalStepInstance>
         {

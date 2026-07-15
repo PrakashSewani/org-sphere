@@ -547,7 +547,8 @@ public class ApprovalService(
     private async Task<Guid?> FindDepartmentHeadAsync(Guid employeeId, TenantId tenantId, CancellationToken ct)
     {
         var employee = await _employeeRepository.GetByIdAsync(employeeId, tenantId, ct);
-        if (employee is null) return null;
+        if (employee is null)
+            return null;
 
         var departmentEmployees = await _employeeRepository.GetByDepartmentAsync(employee.DepartmentId, tenantId, ct);
         var departmentHead = departmentEmployees.FirstOrDefault(e =>
