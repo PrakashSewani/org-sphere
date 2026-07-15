@@ -31,6 +31,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ILeaveBalanceRepository, LeaveBalanceRepository>();
         services.AddScoped<IAttendanceRecordRepository, AttendanceRecordRepository>();
         services.AddScoped<IAttendancePolicyRepository, AttendancePolicyRepository>();
+        services.AddScoped<IApprovalRequestRepository, ApprovalRequestRepository>();
+        services.AddScoped<IApprovalChainRepository, ApprovalChainRepository>();
+        services.AddScoped<IApprovalStepRepository, ApprovalStepRepository>();
+        services.AddScoped<IApprovalStepInstanceRepository, ApprovalStepInstanceRepository>();
+        services.AddScoped<IApprovalDelegationRepository, ApprovalDelegationRepository>();
 
         services.AddSingleton<IMigration, CreateConstraints>();
         services.AddSingleton<IMigration, CreateIndexes>();

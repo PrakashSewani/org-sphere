@@ -122,3 +122,45 @@ public record AttendanceCheckedOutEvent(TenantId TenantId, Guid EmployeeId, Date
     public string EventType => "Attendance.CheckedOut";
     public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
 }
+
+public record ApprovalRequestedEvent(TenantId TenantId, Guid RequestId, Guid RequesterId, Enums.ApprovalType Type) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Approval.Requested";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record ApprovalApprovedEvent(TenantId TenantId, Guid RequestId, Guid ApproverId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Approval.Approved";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record ApprovalRejectedEvent(TenantId TenantId, Guid RequestId, Guid ApproverId, string? Reason) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Approval.Rejected";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record ApprovalEscalatedEvent(TenantId TenantId, Guid RequestId, Guid StepInstanceId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Approval.Escalated";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record ApprovalDelegatedEvent(TenantId TenantId, Guid RequestId, Guid DelegatorId, Guid DelegateId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Approval.Delegated";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record ApprovalChainCreatedEvent(TenantId TenantId, Guid ChainId, Enums.ApprovalType Type) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "ApprovalChain.Created";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
