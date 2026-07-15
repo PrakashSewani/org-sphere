@@ -26,6 +26,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<IEmployeeDocumentRepository, EmployeeDocumentRepository>();
+        services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
+        services.AddScoped<ILeavePolicyRepository, LeavePolicyRepository>();
+        services.AddScoped<ILeaveBalanceRepository, LeaveBalanceRepository>();
+        services.AddScoped<IAttendanceRecordRepository, AttendanceRecordRepository>();
+        services.AddScoped<IAttendancePolicyRepository, AttendancePolicyRepository>();
 
         services.AddSingleton<IMigration, CreateConstraints>();
         services.AddSingleton<IMigration, CreateIndexes>();

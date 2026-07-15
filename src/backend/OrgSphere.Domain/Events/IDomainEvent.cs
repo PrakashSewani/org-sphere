@@ -87,3 +87,38 @@ public record EmployeeDeletedEvent(TenantId TenantId, Guid EmployeeId) : IDomain
     public string EventType => "Employee.Deleted";
     public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
 }
+
+public record LeaveRequestCreatedEvent(TenantId TenantId, Guid LeaveRequestId, Guid EmployeeId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "LeaveRequest.Created";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record LeaveRequestApprovedEvent(TenantId TenantId, Guid LeaveRequestId, Guid EmployeeId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "LeaveRequest.Approved";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record LeaveRequestRejectedEvent(TenantId TenantId, Guid LeaveRequestId, Guid EmployeeId) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "LeaveRequest.Rejected";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record AttendanceCheckedInEvent(TenantId TenantId, Guid EmployeeId, DateTime CheckTime) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Attendance.CheckedIn";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}
+
+public record AttendanceCheckedOutEvent(TenantId TenantId, Guid EmployeeId, DateTime CheckTime) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public string EventType => "Attendance.CheckedOut";
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+}

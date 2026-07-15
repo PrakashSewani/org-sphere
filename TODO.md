@@ -71,18 +71,18 @@
 
 ### Leave Management
 
-- [ ] **TODO-026**: Build Leave module (types, service, repository)
-- [ ] **TODO-027**: Build Leave policies configuration
-- [ ] **TODO-028**: Build Leave request workflow (submit, approve, reject)
-- [ ] **TODO-029**: Build Leave balance tracking
-- [ ] **TODO-030**: Write tests for Leave module
+- [x] **TODO-026**: Build Leave module (types, service, repository)
+- [x] **TODO-027**: Build Leave policies configuration
+- [x] **TODO-028**: Build Leave request workflow (submit, approve, reject)
+- [x] **TODO-029**: Build Leave balance tracking
+- [x] **TODO-030**: Write tests for Leave module
 
 ### Attendance
 
-- [ ] **TODO-031**: Build Attendance module (types, service, repository)
-- [ ] **TODO-032**: Build check-in/check-out functionality
-- [ ] **TODO-033**: Build attendance policies and schedules
-- [ ] **TODO-034**: Write tests for Attendance module
+- [x] **TODO-031**: Build Attendance module (types, service, repository)
+- [x] **TODO-032**: Build check-in/check-out functionality
+- [x] **TODO-033**: Build attendance policies and schedules
+- [x] **TODO-034**: Write tests for Attendance module
 
 ### Approval Engine
 
@@ -256,13 +256,13 @@
 | Phase | Total | Completed | Status |
 |-------|-------|-----------|--------|
 | Phase 1: Foundation | 17 | 17 | Complete |
-| Phase 2: Core Modules | 22 | 4 | In Progress |
+| Phase 2: Core Modules | 22 | 13 | In Progress |
 | Phase 3: Org Designer | 19 | 0 | Not Started |
 | Phase 4: UI & UX | 18 | 0 | Not Started |
 | Phase 5: Features | 13 | 0 | Not Started |
 | Phase 6: Business | 8 | 0 | Not Started |
 | Phase 7: Polish | 17 | 0 | Not Started |
-| **Total** | **114** | **21** | **18%** |
+| **Total** | **114** | **30** | **26%** |
 
 ---
 
