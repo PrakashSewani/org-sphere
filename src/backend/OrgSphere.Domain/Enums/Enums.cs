@@ -78,3 +78,20 @@ public enum EmployeeStatus
     Inactive,
     OnLeave
 }
+
+public enum LeaveType
+{
+    Annual,
+    Sick,
+    Personal,
+    Maternity,
+    Paternity,
+    Unpaid,
+    Other
+}
+
+public enum AttendanceCheckType
+{
+    CheckIn,
+    CheckOut
+}
